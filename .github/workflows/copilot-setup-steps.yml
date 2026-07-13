@@ -1,0 +1,62 @@
+name: Copilot Setup Steps
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - .github/workflows/copilot-setup-steps.yml
+      - src/spa/package-lock.json
+      - src/portfolio-agent-python/pyproject.toml
+      - src/portfolio-agent-python/requirements.lock
+      - "**/*.csproj"
+  pull_request:
+    paths:
+      - .github/workflows/copilot-setup-steps.yml
+      - src/spa/package-lock.json
+      - src/portfolio-agent-python/pyproject.toml
+      - src/portfolio-agent-python/requirements.lock
+      - "**/*.csproj"
+
+jobs:
+  copilot-setup-steps:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore .NET projects
+        shell: bash
+        run: find src tests -name '*.csproj' -print0 | xargs -0 -n1 dotnet restore
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: src/portfolio-agent-python/requirements.lock
+
+      - name: Install Python agent dependencies
+        run: python -m pip install --disable-pip-version-check -e './src/portfolio-agent-python[test]'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: src/spa/package-lock.json
+
+      - name: Install SPA dependencies
+        working-directory: src/spa
+        run: npm ci --no-audit --no-fund
+
+      - name: Install Bicep CLI
+        run: az bicep install
