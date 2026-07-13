@@ -1,0 +1,55 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/Azure/azure-dev/main/schemas/v1.0/azure.yaml.json
+
+requiredVersions:
+    extensions:
+        azure.ai.agents: '>=1.0.0-beta.2'
+name: contoso-asset-management
+metadata:
+    template: contoso-asset-management-multi-tenant-poc
+services:
+    backend-api:
+        project: .
+        host: containerapp
+        language: docker
+        docker:
+            path: ./src/backend-api/Dockerfile
+            remoteBuild: true
+    custom-claims-provider:
+        project: ./src/custom-claims-provider
+        host: function
+        language: csharp
+    frontend-api:
+        project: .
+        host: containerapp
+        language: docker
+        docker:
+            path: ./src/frontend-api/Dockerfile
+            remoteBuild: true
+    portfolio-agent:
+        project: ./src/portfolio-agent
+        host: azure.ai.agent
+        language: csharp
+        docker:
+            path: ./src/portfolio-agent/Dockerfile
+        container:
+            resources:
+                cpu: "1"
+                memory: 2Gi
+    portfolio-agent-python:
+        project: ./src/portfolio-agent-python
+        host: azure.ai.agent
+        language: python
+        docker:
+            path: ./Dockerfile
+            remoteBuild: true
+        container:
+            resources:
+                cpu: "1"
+                memory: 2Gi
+    spa:
+        project: ./src/spa
+        host: staticwebapp
+        language: js
+        dist: dist
+infra:
+    provider: bicep

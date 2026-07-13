@@ -1,0 +1,1 @@
+A simple Foundry hosted portfolio assistant that answers questions about local demo portfolios, portfolio summaries, and position details.

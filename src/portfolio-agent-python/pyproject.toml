@@ -1,0 +1,63 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "portfolio-agent-python"
+version = "1.0.0"
+description = "Contoso Portfolio Agent -- Python Microsoft Agent Framework hosted agent (Foundry Responses protocol)."
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+license = { text = "MIT" }
+
+# Pinned to exact versions (not ranges) so the container build is
+# reproducible. Several packages are preview/beta (see README "API
+# stability notes"); pinning the exact version is the mitigation the task
+# calls for when depending on a preview surface, plus the unit tests in
+# ../tests exercise the specific call shapes this code depends on so an
+# incompatible upgrade fails tests instead of failing silently in
+# production.
+dependencies = [
+    # Hosted-agent Responses protocol server (Azure AI Agent Server SDK).
+    "azure-ai-agentserver-core==2.0.0b7",
+    "azure-ai-agentserver-responses==1.0.0b8",
+    # Microsoft Agent Framework: core agent/session/tool abstractions plus
+    # the Foundry chat-client integration (OpenAI Responses API against a
+    # Foundry project + model deployment -- not the persistent Azure AI
+    # Agent Service).
+    "agent-framework-core==1.11.0",
+    "agent-framework-foundry==1.10.1",
+    # Azure SDKs used directly by this agent (managed-identity auth, Cosmos
+    # conversation memory, Foundry project client transitively via
+    # agent-framework-foundry).
+    "azure-identity==1.25.3",
+    "azure-cosmos==4.16.1",
+    "azure-ai-projects==2.3.0",
+    # Model Context Protocol client used to call BACKEND_MCP_SERVER_URL
+    # (APIM's native MCP gateway) -- the agent never calls the Backend API
+    # or Cosmos DB directly.
+    "mcp==1.28.1",
+    "httpx==0.28.1",
+    # OpenTelemetry API/SDK for the agent's own tool span/counter
+    # instrumentation. Azure Monitor trace/log/metric export is configured
+    # by azure-ai-agentserver-core via the microsoft-opentelemetry distro
+    # (a transitive dependency); pinned here too since this agent's
+    # telemetry module depends on its metrics-export behavior.
+    "opentelemetry-api==1.43.0",
+    "opentelemetry-sdk==1.43.0",
+    "microsoft-opentelemetry==1.3.5",
+    "pydantic==2.13.4",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest==9.1.1",
+    "pytest-asyncio==1.4.0",
+]
+
+[tool.setuptools]
+packages = ["portfolio_agent"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"

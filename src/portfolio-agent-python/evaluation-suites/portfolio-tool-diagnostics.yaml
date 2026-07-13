@@ -1,0 +1,83 @@
+# Python-agent parity scaffold, mirroring src/portfolio-agent/evaluation-suites/
+# portfolio-tool-diagnostics.yaml for the parallel Python hosted agent. See that
+# file's header for the full rationale (why every evaluator here is
+# pregeneration_blocked, and why this is the only suite wired with the *component*
+# tool evaluators); this file only differs in agent target identity and local_uri
+# path depth. The referenced dataset (datasets/portfolio-tool-diagnostics) is 100%
+# evaluation_mode="trace_dataset" and is agent-agnostic authored content -- neither
+# hosted agent (C# or Python) has contributed real tool_calls/response traces to it
+# yet.
+name: portfolio-tool-diagnostics-python
+mode: trace_dataset
+evaluation_level: turn
+agent_target_used_for_grading: false
+source_dataset:
+    name: portfolio-tool-diagnostics
+    version: "1.0"
+    local_uri: ../../portfolio-agent/datasets/portfolio-tool-diagnostics
+    row_filter:
+        field: evaluation_mode
+        equals: trace_dataset
+    row_count: 14
+    row_ids:
+        - tool-diag-001
+        - tool-diag-002
+        - tool-diag-003
+        - tool-diag-004
+        - tool-diag-005
+        - tool-diag-006
+        - tool-diag-007
+        - tool-diag-008
+        - tool-diag-009
+        - tool-diag-010
+        - tool-diag-011
+        - tool-diag-012
+        - tool-diag-013
+        - tool-diag-014
+evaluators:
+    - name: builtin.tool_call_accuracy
+      version: "12"
+      data_mapping:
+          query: "{{item.query}}"
+          tool_definitions: "{{item.tool_definitions}}"
+          tool_calls: "PENDING: no tool_calls column in the referenced dataset; optional-but-essential for meaningful grading; must be populated once portfolio-agent-python is invoked for real (see next_action)"
+      pregeneration_blocked: true
+    - name: builtin.tool_selection
+      version: "10"
+      data_mapping:
+          query: "{{item.query}}"
+          tool_definitions: "{{item.tool_definitions}}"
+          tool_calls: "PENDING: same gap as tool_call_accuracy"
+      pregeneration_blocked: true
+    - name: builtin.tool_input_accuracy
+      version: "13"
+      data_mapping:
+          query: "{{item.query}}"
+          tool_definitions: "{{item.tool_definitions}}"
+          response: "PENDING: response is a required field for this evaluator and the referenced dataset has no candidate_response/response column"
+      pregeneration_blocked: true
+    - name: builtin.tool_output_utilization
+      version: "7"
+      data_mapping:
+          query: "{{item.query}}"
+          tool_definitions: "{{item.tool_definitions}}"
+          response: "PENDING: same required-response gap as tool_input_accuracy"
+      pregeneration_blocked: true
+    - name: builtin.tool_call_success
+      version: "9"
+      data_mapping:
+          response: "PENDING: response is the sole required field for this evaluator and is entirely absent from this dataset"
+      pregeneration_blocked: true
+options:
+    eval_model: gpt-4.1-mini
+excluded_evaluators:
+    - name: portfolio-domain-v2
+      reason: "reserved for smoke/tenant-safety suites; this suite intentionally uses component tool evaluators only, per suite design (see the C# suite's equivalent file)."
+    - name: builtin.indirect_attack
+      reason: "live catalog classification_rationale confirms 'Model only' support; cannot grade an agent's tool-call trace."
+    - name: builtin.prohibited_actions
+      reason: "not present in the live evaluator catalog verified for this project; do not register a fake reference."
+    - name: builtin.sensitive_data_leakage
+      reason: "not present in the live evaluator catalog verified for this project; do not register a fake reference."
+registration_status: blocked_pending_pregeneration
+next_action: "Once portfolio-agent-python is deployed and published to an azd environment, invoke it per row with the row's authenticated_tenant context (ephemeral trusted context + unique session id, unchanged rules from eval-invocation-design.json), capture the actual final response text AND the structured tool_calls sequence, attach both as new dataset columns alongside the existing tool_definitions, register the resulting content as a Foundry dataset version, and submit via the azure-ai-projects/openai SDK using the data_mapping above with the PENDING placeholders replaced by real item.* references. Until then this file is a validated draft, not a submitted run; no evaluator in this suite is runnable today for either hosted agent."

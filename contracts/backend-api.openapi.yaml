@@ -1,0 +1,266 @@
+openapi: 3.0.3
+info:
+  title: Contoso Asset Management Backend API
+  version: 0.1.0
+  description: Internal authorization and data-access boundary consumed only by the frontend API/BFF.
+servers:
+  - url: https://{backendHost}
+    description: Internal Container Apps endpoint
+    variables:
+      backendHost:
+        default: backend.internal.example
+security:
+  - userBearer: []
+    frontendServiceBearer: []
+paths:
+  /health:
+    get:
+      summary: Health probe
+      operationId: getBackendHealth
+      security: []
+      responses:
+        "200":
+          description: Service is healthy.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+  /internal/tenants/{tenantId}/portfolios:
+    get:
+      summary: List tenant portfolios
+      operationId: listBackendPortfolios
+      description: Resolves tenant Cosmos routing from the validated token tenant and returns raw domain portfolios.
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/CorrelationId"
+      responses:
+        "200":
+          description: Same-tenant portfolios.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Portfolio"
+              example:
+                - id: alpha-growth
+                  tenantId: AlphaCapital
+                  name: Alpha Growth Portfolio
+                  currency: USD
+                  marketValue: 4250000
+                  asOfDate: "2026-07-01"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /internal/tenants/{tenantId}/portfolios/{portfolioId}/positions/{positionId}:
+    get:
+      summary: Get position detail
+      operationId: getBackendPosition
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/PortfolioId"
+        - $ref: "#/components/parameters/PositionId"
+        - $ref: "#/components/parameters/CorrelationId"
+      responses:
+        "200":
+          description: Same-tenant position.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Position"
+              example:
+                id: pos-msft
+                tenantId: AlphaCapital
+                portfolioId: alpha-growth
+                instrumentName: Microsoft
+                assetClass: Equity
+                quantity: 1200
+                marketValue: 820000
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          description: Position was not found.
+  /internal/tenants/{tenantId}/transactions/{transactionId}/approve:
+    post:
+      summary: Approve a transaction
+      operationId: approveBackendTransaction
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/TransactionId"
+        - $ref: "#/components/parameters/CorrelationId"
+      responses:
+        "200":
+          description: Transaction was approved.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransactionApproval"
+              example:
+                id: txn-alpha-001
+                tenantId: AlphaCapital
+                portfolioId: alpha-growth
+                requestedBy: user-alpha-manager
+                status: Approved
+                amount: 25000
+                createdAt: "2026-07-04T19:30:00Z"
+                approvedBy: user-alpha-admin
+                approvedAt: "2026-07-04T20:00:00Z"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          description: Transaction was not found.
+        "409":
+          description: Transaction exists but is not pending.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error: transaction-not-pending
+components:
+  securitySchemes:
+    userBearer:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Original user access token. Backend re-validates issuer, audience, signature, lifetime, tenant, status, scopes, and tenant_roles.
+    frontendServiceBearer:
+      type: apiKey
+      in: header
+      name: X-Service-Authorization
+      description: Internal MngEnv Entra bearer token proving the caller is the approved frontend API managed identity/service principal.
+  parameters:
+    TenantId:
+      name: tenantId
+      in: path
+      required: true
+      schema:
+        type: string
+        enum: [AlphaCapital, BetaWealth, GammaFund, DeltaEquity]
+      description: Compared with the validated token tenant claim. Cosmos routing never uses this value as authority.
+    PortfolioId:
+      name: portfolioId
+      in: path
+      required: true
+      schema:
+        type: string
+    PositionId:
+      name: positionId
+      in: path
+      required: true
+      schema:
+        type: string
+    TransactionId:
+      name: transactionId
+      in: path
+      required: true
+      schema:
+        type: string
+    CorrelationId:
+      name: X-Correlation-ID
+      in: header
+      required: false
+      schema:
+        type: string
+  responses:
+    Unauthorized:
+      description: Missing or invalid user bearer token.
+    Forbidden:
+      description: Tenant mismatch, inactive tenant, missing scope, missing role, missing service authentication, or resource tenant mismatch.
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/ProblemDetails"
+  schemas:
+    HealthResponse:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          example: healthy
+    Portfolio:
+      type: object
+      required: [id, tenantId, name, currency, marketValue, asOfDate]
+      properties:
+        id:
+          type: string
+        tenantId:
+          type: string
+        name:
+          type: string
+        currency:
+          type: string
+        marketValue:
+          type: number
+          format: decimal
+        asOfDate:
+          type: string
+          format: date
+    Position:
+      type: object
+      required: [id, tenantId, portfolioId, instrumentName, assetClass, quantity, marketValue]
+      properties:
+        id:
+          type: string
+        tenantId:
+          type: string
+        portfolioId:
+          type: string
+        instrumentName:
+          type: string
+        assetClass:
+          type: string
+        quantity:
+          type: number
+          format: decimal
+        marketValue:
+          type: number
+          format: decimal
+    TransactionApproval:
+      type: object
+      required: [id, tenantId, portfolioId, requestedBy, status, amount, createdAt]
+      properties:
+        id:
+          type: string
+        tenantId:
+          type: string
+        portfolioId:
+          type: string
+        requestedBy:
+          type: string
+        status:
+          type: string
+          enum: [Pending, Approved, Rejected]
+        amount:
+          type: number
+          format: decimal
+        createdAt:
+          type: string
+          format: date-time
+        approvedBy:
+          type: string
+          nullable: true
+        approvedAt:
+          type: string
+          format: date-time
+          nullable: true
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+    ProblemDetails:
+      type: object
+      properties:
+        title:
+          type: string
+        detail:
+          type: string
+        status:
+          type: integer

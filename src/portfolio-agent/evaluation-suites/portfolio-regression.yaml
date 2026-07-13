@@ -1,0 +1,70 @@
+# Composite suite: NOT a single submittable run. Foundry's data-source/target
+# constraints forbid mixing agent-target and trace_dataset rows (or mixing
+# datasets with different tool_definitions/response schemas) in one eval run,
+# so "regression" is defined here as an ordered set of the six component run
+# definitions already owned by this todo (implement-eval-suites), matching
+# datasets/portfolio-regression/portfolio-regression.manifest.json's
+# composed_suites (owned by author-eval-datasets) but resolved down to
+# concrete, per-mode run files. Executing "the regression suite" means
+# sequencing all six components below and aggregating their individual
+# results; no orchestration tool today runs them as one invocation.
+#
+# This file also resolves the one open question
+# datasets/portfolio-regression/portfolio-regression.manifest.json left
+# unresolved for smoke-core ("evaluation_mode: unspecified/open_question"):
+# for regression composition purposes, smoke-core is treated as agent-target,
+# because that is both how evalrun_example_baseline actually
+# executed it and the only mode the azd eval CLI supports.
+name: portfolio-regression
+mode: composite
+total_row_count: 63 # 15 (smoke-core) + 18 (portfolio-smoke) + 16 (portfolio-tenant-safety) + 14 (portfolio-tool-diagnostics)
+components:
+    - name: smoke-core
+      suite_file: smoke-core.yaml
+      mode: agent_target
+      cli_runnable: true
+      row_count: 15
+      registration_status: historical_baseline_preserved
+      run_command: "azd ai agent eval run --config evaluation-suites/smoke-core.yaml"
+    - name: portfolio-smoke-agent-target
+      suite_file: ../eval.yaml
+      mode: agent_target
+      cli_runnable: true
+      row_count: 6
+      registration_status: see_registration_manifest
+      run_command: "azd ai agent eval run --config eval.yaml"
+    - name: portfolio-smoke-trace
+      suite_file: portfolio-smoke-trace.yaml
+      mode: trace_dataset
+      cli_runnable: false
+      row_count: 12
+      registration_status: draft_pending_pregeneration
+      run_command: "not runnable via azd; add-eval-orchestration submits via azure-ai-projects/openai evals SDK per portfolio-smoke-trace.yaml next_action"
+    - name: portfolio-tenant-safety-agent-target
+      suite_file: portfolio-tenant-safety.yaml
+      mode: agent_target
+      cli_runnable: true
+      row_count: 5
+      registration_status: see_registration_manifest
+      run_command: "azd ai agent eval run --config evaluation-suites/portfolio-tenant-safety.yaml"
+    - name: portfolio-tenant-safety-trace
+      suite_file: portfolio-tenant-safety-trace.yaml
+      mode: trace_dataset
+      cli_runnable: false
+      row_count: 11
+      registration_status: draft_pending_pregeneration
+      run_command: "not runnable via azd; add-eval-orchestration submits via azure-ai-projects/openai evals SDK per portfolio-tenant-safety-trace.yaml next_action"
+    - name: portfolio-tool-diagnostics
+      suite_file: portfolio-tool-diagnostics.yaml
+      mode: trace_dataset
+      cli_runnable: false
+      row_count: 14
+      registration_status: blocked_pending_pregeneration
+      run_command: "not runnable via azd; add-eval-orchestration submits via azure-ai-projects/openai evals SDK per portfolio-tool-diagnostics.yaml next_action"
+constraints_enforced:
+    - "No component mixes agent_target and trace_dataset rows in one run."
+    - "No component sets data_source.target=azure_ai_agent for a trace_dataset component (agent_target_used_for_grading: false in each trace draft file)."
+    - "builtin.indirect_attack is not used anywhere (agent targets are not supported for it)."
+    - "No retrieval/text-similarity/code evaluators are used anywhere (builtin.retrieval, builtin.document_retrieval, builtin.similarity, builtin.text_similarity, builtin.code_vulnerability, and ground-truth text-overlap graders such as bleu/gleu/rouge/meteor/f1_score are all excluded)."
+    - "builtin.prohibited_actions and builtin.sensitive_data_leakage are never referenced (absent from the live catalog; see the target project's live evaluator catalog); stable fallbacks (domain rubric hard gate, task_adherence/relevance, orchestration-owned deterministic checks) are wired instead."
+next_action: "Run the three cli_runnable=true components today via azd (each is independently registrable/runnable). The three trace_dataset components remain draft_pending_pregeneration/blocked_pending_pregeneration until add-eval-orchestration implements per-row hosted-agent invocation and captures real response/tool_calls; see each component suite_file's own next_action for the exact follow-up call."

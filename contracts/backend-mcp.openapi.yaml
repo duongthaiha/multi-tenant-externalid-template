@@ -1,0 +1,258 @@
+openapi: 3.0.3
+info:
+  title: Contoso Asset Management Backend MCP Tools
+  version: 0.1.0
+  description: >
+    APIM-facing MCP tool contract for the Foundry hosted portfolio agent.
+    Tenant authority comes only from the validated External ID token
+    extension_tenantId claim; route tenant values are compared with that claim
+    and are never routing authority by themselves.
+servers:
+  - url: https://{apimGatewayHost}/mcp/assets
+    description: APIM MCP gateway endpoint for Foundry hosted agents
+    variables:
+      apimGatewayHost:
+        default: example.azure-api.net
+security:
+  - externalIdBearer: []
+paths:
+  /tenants/{tenantId}/portfolios:
+    get:
+      summary: MCP tool - list tenant portfolios
+      operationId: mcpListPortfolios
+      description: Lists portfolios for the tenant bound to the validated user token.
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/AgentId"
+      responses:
+        "200":
+          description: Same-tenant portfolios.
+          headers:
+            X-Correlation-ID:
+              $ref: "#/components/headers/CorrelationId"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Portfolio"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /tenants/{tenantId}/portfolios/{portfolioId}/positions/{positionId}:
+    get:
+      summary: MCP tool - get position detail
+      operationId: mcpGetPositionDetail
+      description: Gets a same-tenant position detail for the tenant bound to the validated user token.
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/PortfolioId"
+        - $ref: "#/components/parameters/PositionId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/AgentId"
+      responses:
+        "200":
+          description: Same-tenant position.
+          headers:
+            X-Correlation-ID:
+              $ref: "#/components/headers/CorrelationId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Position"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          description: Position was not found.
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /tenants/{tenantId}/transactions/{transactionId}/approve:
+    post:
+      summary: MCP tool - approve transaction
+      operationId: mcpApproveTransaction
+      description: >
+        Approves a pending same-tenant transaction. Requires assets.write and
+        TenantAdmin or PortfolioManager authorization in the validated user token.
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/TransactionId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/AgentId"
+      responses:
+        "200":
+          description: Transaction was approved.
+          headers:
+            X-Correlation-ID:
+              $ref: "#/components/headers/CorrelationId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransactionApproval"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          description: Transaction was not found.
+        "409":
+          description: Transaction exists but is not pending.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+components:
+  securitySchemes:
+    externalIdBearer:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: >
+        Azure External ID user access token for the API audience. APIM validates
+        extension_tenantId, tenant_status, tenant_roles, and operation scopes
+        before forwarding the call.
+  parameters:
+    TenantId:
+      name: tenantId
+      in: path
+      required: true
+      schema:
+        type: string
+        enum: [AlphaCapital, BetaWealth, GammaFund, DeltaEquity]
+      description: Compared with the validated token tenant claim. Never used as routing authority.
+    PortfolioId:
+      name: portfolioId
+      in: path
+      required: true
+      schema:
+        type: string
+    PositionId:
+      name: positionId
+      in: path
+      required: true
+      schema:
+        type: string
+    TransactionId:
+      name: transactionId
+      in: path
+      required: true
+      schema:
+        type: string
+    CorrelationId:
+      name: X-Correlation-ID
+      in: header
+      required: false
+      schema:
+        type: string
+      description: Optional caller correlation ID propagated by APIM and backend logs.
+    AgentId:
+      name: X-Agent-Id
+      in: header
+      required: false
+      schema:
+        type: string
+      description: Optional Foundry agent identifier used only for gateway rate-limit partitioning and diagnostics.
+  headers:
+    CorrelationId:
+      description: Correlation ID emitted or propagated by APIM.
+      schema:
+        type: string
+  responses:
+    Unauthorized:
+      description: Missing or invalid user bearer token.
+    Forbidden:
+      description: Tenant mismatch, inactive tenant, missing scope, missing role, missing service authentication, or resource tenant mismatch.
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/ProblemDetails"
+    RateLimited:
+      description: MCP tool rate limit exceeded.
+  schemas:
+    Portfolio:
+      type: object
+      required: [id, tenantId, name, currency, marketValue, asOfDate]
+      properties:
+        id:
+          type: string
+        tenantId:
+          type: string
+        name:
+          type: string
+        currency:
+          type: string
+        marketValue:
+          type: number
+          format: decimal
+        asOfDate:
+          type: string
+          format: date
+    Position:
+      type: object
+      required: [id, tenantId, portfolioId, instrumentName, assetClass, quantity, marketValue]
+      properties:
+        id:
+          type: string
+        tenantId:
+          type: string
+        portfolioId:
+          type: string
+        instrumentName:
+          type: string
+        assetClass:
+          type: string
+        quantity:
+          type: number
+          format: decimal
+        marketValue:
+          type: number
+          format: decimal
+    TransactionApproval:
+      type: object
+      required: [id, tenantId, portfolioId, requestedBy, status, amount, createdAt]
+      properties:
+        id:
+          type: string
+        tenantId:
+          type: string
+        portfolioId:
+          type: string
+        requestedBy:
+          type: string
+        status:
+          type: string
+          enum: [Pending, Approved, Rejected]
+        amount:
+          type: number
+          format: decimal
+        createdAt:
+          type: string
+          format: date-time
+        approvedBy:
+          type: string
+          nullable: true
+        approvedAt:
+          type: string
+          format: date-time
+          nullable: true
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+    ProblemDetails:
+      type: object
+      properties:
+        title:
+          type: string
+        detail:
+          type: string
+        status:
+          type: integer

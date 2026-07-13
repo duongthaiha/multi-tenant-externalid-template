@@ -1,0 +1,68 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug backend API",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "dotnet: build all",
+      "program": "${workspaceFolder}/src/backend-api/bin/Debug/net8.0/Contoso.AssetManagement.BackendApi.dll",
+      "args": [],
+      "cwd": "${workspaceFolder}/src/backend-api",
+      "stopAtEntry": false,
+      "serverReadyAction": {
+        "action": "openExternally",
+        "pattern": "Now listening on: (http://localhost:8080)"
+      },
+      "env": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "ASPNETCORE_URLS": "http://localhost:8080"
+      }
+    },
+    {
+      "name": "Debug frontend API",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "dotnet: build all",
+      "program": "${workspaceFolder}/src/frontend-api/bin/Debug/net8.0/Contoso.AssetManagement.FrontendApi.dll",
+      "args": [],
+      "cwd": "${workspaceFolder}/src/frontend-api",
+      "stopAtEntry": false,
+      "serverReadyAction": {
+        "action": "openExternally",
+        "pattern": "Now listening on: (http://localhost:7070)"
+      },
+      "env": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "ASPNETCORE_URLS": "http://localhost:7070",
+        "BackendApi__BaseAddress": "http://localhost:8080"
+      }
+    },
+    {
+      "name": "Debug SPA in Chrome",
+      "type": "pwa-chrome",
+      "request": "launch",
+      "preLaunchTask": "spa: dev",
+      "url": "http://127.0.0.1:5173",
+      "webRoot": "${workspaceFolder}/src/spa/src"
+    },
+    {
+      "name": "Attach to Custom Claims Provider",
+      "type": "coreclr",
+      "request": "attach",
+      "preLaunchTask": "claims-provider: run",
+      "processId": "${command:pickProcess}"
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Debug local app stack",
+      "configurations": [
+        "Debug backend API",
+        "Debug frontend API",
+        "Debug SPA in Chrome"
+      ],
+      "stopAll": true
+    }
+  ]
+}

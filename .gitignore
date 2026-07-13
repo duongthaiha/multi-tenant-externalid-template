@@ -150,6 +150,15 @@ activemq-data/
 # Environments
 .env
 .envrc
+local.settings.json
+docs/external-id-app-registrations.local.json
+docs/internal-entra-service-auth.local.json
+docs/external-id-demo-users.local.json
+docs/external-id-demo-user-passwords.local.json
+docs/demo-login.local.md
+docs/workforce-entra-federation-app.local.json
+docs/workforce-federation-authorized-users.local.json
+docs/workforce-federated-users.local.json
 .venv
 env/
 venv/
@@ -216,3 +225,46 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Node / JavaScript
+node_modules/
+npm-debug.log*
+
+# .NET
+[Bb]in/
+[Oo]bj/
+.vs/
+TestResults/
+*.trx
+*.coverage
+*.coveragexml
+*.user
+*.rsuser
+*.suo
+*.userprefs
+*.nupkg
+
+# Bicep compiled ARM artifacts (generated from *.bicep, not needed in the repo)
+infra/main.json
+infra/external-id.json
+infra/tenant-onboarding.json
+infra/modules/*.json
+
+# Private planning and local notes
+/copilot-research-*.md
+/copilot-session-*.md
+/docs/research.md
+/note/
+
+# Local and generated Foundry state
+src/*/local generated agent metadata
+src/*/the target project's live evaluator catalog
+src/*/.foundry/suites/*.dataset.json
+src/*/.foundry/suites/*.evaluator.json
+src/*/.foundry/suites/*.evaluator.version-history.json
+src/*/the target project's local registration output
+src/*/.foundry/results/**/*.json
+src/*/.foundry/results/*.json
+
+# Office temporary files
+~$*

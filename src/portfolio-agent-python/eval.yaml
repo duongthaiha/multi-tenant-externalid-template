@@ -1,0 +1,57 @@
+# Python-agent parity scaffold for the default eval suite (agent-target mode only),
+# mirroring src/portfolio-agent/eval.yaml's structure and intent for the parallel Python
+# hosted agent (azd service "portfolio-agent-python"). See that file's header for the
+# full rationale behind the agent-target vs trace-dataset split, the direct-SDK
+# submission requirement, and the evaluator-binding verification gate; this file does
+# not repeat that reasoning, only the choices specific to the Python profile.
+#
+# UNLIKE src/portfolio-agent/eval.yaml, no line in this file is a live-verified remote
+# registration performed against a running "portfolio-agent-python" agent -- that
+# service does not exist yet. This file is a reviewed parity scaffold: once
+# portfolio-agent-python is deployed and published to an azd environment (with
+# AGENT_PORTFOLIO_AGENT_PYTHON_NAME/_VERSION/_RESPONSES_ENDPOINT set), running
+# scripts/evaluate-portfolio-agent.py --agent python smoke against it will exercise
+# this exact file for real. Until then, the fail-closed preflight (agent existence/
+# status via AGENT_PORTFOLIO_AGENT_PYTHON_NAME) is expected to reject the run rather
+# than silently pass -- that is the intended, safe behavior, not a bug in this file.
+#
+# dataset.local_uri and evaluators[0].local_uri below deliberately point back into
+# ../portfolio-agent/ (relative to this file's own directory, per
+# scripts/evaluate-portfolio-agent.py's resolve_dataset_path/suite-relative
+# resolution) rather than duplicating those files here. The portfolio-smoke-agent-
+# target dataset rows and the portfolio-domain-v2 rubric are agent-agnostic content
+# (queries, expected refusal/ambiguity behavior, scoring dimensions); only the agent
+# target identity and its azd environment-key prefix differ between the two hosted
+# agents. dataset.name/version and evaluators[*].name/version are the SAME canonical
+# Foundry registrations the C# suite already uses (portfolio-smoke-agent-target
+# "2.0", portfolio-domain-v2 "3", builtin.task_adherence "13") -- referenced, not
+# re-registered, so both profiles are graded against one shared, authoritative
+# definition of "smoke" quality. Regenerate the referenced dataset directory the same
+# way src/portfolio-agent/eval.yaml documents (run from src/portfolio-agent/, the
+# canonical owner of that content); this file has nothing to regenerate on its own.
+#
+# The Python runtime owns the baseline instruction metadata referenced below.
+# Direct SDK submission remains preferred because the installed azd extension can
+# reuse a stale Eval container regardless of the submitted suite configuration.
+#
+# `agent.version` is (as in the C# suite) intentionally omitted: the live-deployed
+# version is always resolved from the azd environment (AGENT_PORTFOLIO_AGENT_PYTHON_
+# VERSION) by resolve_agent_version, never read from this file at submission time.
+name: portfolio-smoke-python
+agent:
+    name: portfolio-agent-python
+    kind: hosted
+    config: .agent_configs/baseline/metadata.yaml
+dataset:
+    name: portfolio-smoke-agent-target
+    version: "2.0"
+    local_uri: ../portfolio-agent/evaluation-suites/portfolio-smoke-agent-target
+evaluators:
+    - name: portfolio-domain-v2
+      version: "3"
+      local_uri: ../portfolio-agent/evaluators/portfolio-domain-v2/rubric_dimensions.json
+    - name: builtin.task_adherence
+      version: "13"
+options:
+    eval_model: gpt-4.1-mini
+max_samples: 6

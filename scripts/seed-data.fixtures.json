@@ -1,0 +1,518 @@
+{
+  "schemaVersion": "1.0",
+  "seededAt": "2026-01-15T00:00:00Z",
+  "tenants": [
+    {
+      "tenantId": "AlphaCapital",
+      "displayName": "Alpha Capital Advisors",
+      "status": "active",
+      "region": "eastus",
+      "provisioningStatus": "Completed",
+      "seededAt": "2026-01-15T00:00:00Z",
+      "users": [
+        {
+          "userId": "alpha-admin-001",
+          "displayName": "Avery Alpha",
+          "email": "avery.alpha.admin@example.com",
+          "status": "active",
+          "roles": [
+            "TenantAdmin"
+          ]
+        },
+        {
+          "userId": "alpha-viewer-001",
+          "displayName": "Rowan Alpha",
+          "email": "rowan.alpha.viewer@example.com",
+          "status": "active",
+          "roles": [
+            "PortfolioViewer"
+          ]
+        }
+      ],
+      "portfolios": [
+        {
+          "id": "alpha-growth",
+          "name": "Alpha Strategic Growth",
+          "currency": "USD",
+          "marketValue": 12845000,
+          "asOfDate": "2026-01-15",
+          "positions": [
+            {
+              "id": "alpha-growth-us-treasury",
+              "instrumentName": "US Treasury 10Y Note",
+              "assetClass": "FixedIncome",
+              "quantity": 1200000,
+              "marketValue": 1192500
+            },
+            {
+              "id": "alpha-growth-contoso-tech",
+              "instrumentName": "Contoso Technology Equity",
+              "assetClass": "Equity",
+              "quantity": 8500,
+              "marketValue": 2125000
+            },
+            {
+              "id": "alpha-growth-fabrikam-cloud",
+              "instrumentName": "Fabrikam Cloud Equity",
+              "assetClass": "Equity",
+              "quantity": 6100,
+              "marketValue": 1830000
+            },
+            {
+              "id": "alpha-growth-global-reit",
+              "instrumentName": "Global Core REIT",
+              "assetClass": "RealEstate",
+              "quantity": 45000,
+              "marketValue": 1440000
+            },
+            {
+              "id": "alpha-growth-cash",
+              "instrumentName": "USD Liquidity Sleeve",
+              "assetClass": "Cash",
+              "quantity": 2450000,
+              "marketValue": 2450000
+            }
+          ]
+        },
+        {
+          "id": "alpha-income",
+          "name": "Alpha Municipal Income",
+          "currency": "USD",
+          "marketValue": 9340000,
+          "asOfDate": "2026-01-15",
+          "positions": [
+            {
+              "id": "alpha-income-ny-muni",
+              "instrumentName": "New York GO Municipal Bond",
+              "assetClass": "FixedIncome",
+              "quantity": 1800000,
+              "marketValue": 1764000
+            },
+            {
+              "id": "alpha-income-ca-muni",
+              "instrumentName": "California Revenue Bond",
+              "assetClass": "FixedIncome",
+              "quantity": 1500000,
+              "marketValue": 1482000
+            },
+            {
+              "id": "alpha-income-dividend-etf",
+              "instrumentName": "Dividend Leaders ETF",
+              "assetClass": "Equity",
+              "quantity": 22000,
+              "marketValue": 1980000
+            },
+            {
+              "id": "alpha-income-infra-fund",
+              "instrumentName": "North America Infrastructure Fund",
+              "assetClass": "Alternative",
+              "quantity": 900000,
+              "marketValue": 945000
+            },
+            {
+              "id": "alpha-income-cash",
+              "instrumentName": "USD Operating Cash",
+              "assetClass": "Cash",
+              "quantity": 1169000,
+              "marketValue": 1169000
+            }
+          ]
+        }
+      ],
+      "transactionApprovals": [
+        {
+          "id": "approval-alphacapital-001",
+          "portfolioId": "alpha-growth",
+          "requestedBy": "alpha-admin-001",
+          "status": "Pending",
+          "amount": 192675.0,
+          "createdAt": "2026-01-15T09:30:00Z"
+        }
+      ]
+    },
+    {
+      "tenantId": "BetaWealth",
+      "displayName": "Beta Wealth Partners",
+      "status": "active",
+      "region": "eastus",
+      "provisioningStatus": "Completed",
+      "seededAt": "2026-01-15T00:00:00Z",
+      "users": [
+        {
+          "userId": "beta-manager-001",
+          "displayName": "Blair Beta",
+          "email": "blair.beta.manager@example.com",
+          "status": "active",
+          "roles": [
+            "PortfolioManager"
+          ]
+        },
+        {
+          "userId": "beta-viewer-001",
+          "displayName": "Casey Beta",
+          "email": "casey.beta.viewer@example.com",
+          "status": "active",
+          "roles": [
+            "PortfolioViewer"
+          ]
+        }
+      ],
+      "portfolios": [
+        {
+          "id": "beta-balanced",
+          "name": "Beta Balanced Mandate",
+          "currency": "USD",
+          "marketValue": 15760000,
+          "asOfDate": "2026-01-15",
+          "positions": [
+            {
+              "id": "beta-balanced-world-equity",
+              "instrumentName": "World Equity Index Fund",
+              "assetClass": "Equity",
+              "quantity": 31000,
+              "marketValue": 4030000
+            },
+            {
+              "id": "beta-balanced-aggregate-bond",
+              "instrumentName": "Aggregate Bond Fund",
+              "assetClass": "FixedIncome",
+              "quantity": 52000,
+              "marketValue": 4680000
+            },
+            {
+              "id": "beta-balanced-private-credit",
+              "instrumentName": "Private Credit Sleeve",
+              "assetClass": "Alternative",
+              "quantity": 2200000,
+              "marketValue": 2310000
+            },
+            {
+              "id": "beta-balanced-commodities",
+              "instrumentName": "Broad Commodities ETF",
+              "assetClass": "Commodity",
+              "quantity": 14500,
+              "marketValue": 1015000
+            },
+            {
+              "id": "beta-balanced-cash",
+              "instrumentName": "USD Client Cash",
+              "assetClass": "Cash",
+              "quantity": 3725000,
+              "marketValue": 3725000
+            }
+          ]
+        },
+        {
+          "id": "beta-esg",
+          "name": "Beta Sustainable Opportunities",
+          "currency": "USD",
+          "marketValue": 11220000,
+          "asOfDate": "2026-01-15",
+          "positions": [
+            {
+              "id": "beta-esg-green-bond",
+              "instrumentName": "Green Bond Ladder",
+              "assetClass": "FixedIncome",
+              "quantity": 2400000,
+              "marketValue": 2376000
+            },
+            {
+              "id": "beta-esg-clean-energy",
+              "instrumentName": "Clean Energy Equity Basket",
+              "assetClass": "Equity",
+              "quantity": 7400,
+              "marketValue": 1665000
+            },
+            {
+              "id": "beta-esg-water",
+              "instrumentName": "Water Infrastructure Fund",
+              "assetClass": "Equity",
+              "quantity": 9600,
+              "marketValue": 1392000
+            },
+            {
+              "id": "beta-esg-social-housing",
+              "instrumentName": "Social Housing Note",
+              "assetClass": "FixedIncome",
+              "quantity": 1800000,
+              "marketValue": 1818000
+            },
+            {
+              "id": "beta-esg-cash",
+              "instrumentName": "USD ESG Cash",
+              "assetClass": "Cash",
+              "quantity": 3969000,
+              "marketValue": 3969000
+            }
+          ]
+        }
+      ],
+      "transactionApprovals": [
+        {
+          "id": "approval-betawealth-001",
+          "portfolioId": "beta-balanced",
+          "requestedBy": "beta-manager-001",
+          "status": "Pending",
+          "amount": 236400.0,
+          "createdAt": "2026-01-15T09:30:00Z"
+        }
+      ]
+    },
+    {
+      "tenantId": "GammaFund",
+      "displayName": "Gamma Fund Services",
+      "status": "active",
+      "region": "eastus",
+      "provisioningStatus": "Completed",
+      "seededAt": "2026-01-15T00:00:00Z",
+      "users": [
+        {
+          "userId": "gamma-admin-001",
+          "displayName": "Drew Gamma",
+          "email": "drew.gamma.admin@example.com",
+          "status": "active",
+          "roles": [
+            "TenantAdmin"
+          ]
+        },
+        {
+          "userId": "gamma-manager-001",
+          "displayName": "Emery Gamma",
+          "email": "emery.gamma.manager@example.com",
+          "status": "active",
+          "roles": [
+            "PortfolioManager"
+          ]
+        }
+      ],
+      "portfolios": [
+        {
+          "id": "gamma-alpha",
+          "name": "Gamma Absolute Return",
+          "currency": "USD",
+          "marketValue": 18790000,
+          "asOfDate": "2026-01-15",
+          "positions": [
+            {
+              "id": "gamma-alpha-market-neutral",
+              "instrumentName": "Market Neutral Equity Fund",
+              "assetClass": "Alternative",
+              "quantity": 3200000,
+              "marketValue": 3344000
+            },
+            {
+              "id": "gamma-alpha-macro",
+              "instrumentName": "Global Macro Strategy",
+              "assetClass": "Alternative",
+              "quantity": 2800000,
+              "marketValue": 2940000
+            },
+            {
+              "id": "gamma-alpha-tips",
+              "instrumentName": "US TIPS Ladder",
+              "assetClass": "FixedIncome",
+              "quantity": 3500000,
+              "marketValue": 3482500
+            },
+            {
+              "id": "gamma-alpha-gold",
+              "instrumentName": "Allocated Gold Trust",
+              "assetClass": "Commodity",
+              "quantity": 14000,
+              "marketValue": 910000
+            },
+            {
+              "id": "gamma-alpha-cash",
+              "instrumentName": "USD Margin Cash",
+              "assetClass": "Cash",
+              "quantity": 8113500,
+              "marketValue": 8113500
+            }
+          ]
+        },
+        {
+          "id": "gamma-credit",
+          "name": "Gamma Opportunistic Credit",
+          "currency": "USD",
+          "marketValue": 14330000,
+          "asOfDate": "2026-01-15",
+          "positions": [
+            {
+              "id": "gamma-credit-senior-loan",
+              "instrumentName": "Senior Loan Fund",
+              "assetClass": "FixedIncome",
+              "quantity": 4100000,
+              "marketValue": 4182000
+            },
+            {
+              "id": "gamma-credit-high-yield",
+              "instrumentName": "High Yield Bond Fund",
+              "assetClass": "FixedIncome",
+              "quantity": 2900000,
+              "marketValue": 2842000
+            },
+            {
+              "id": "gamma-credit-distressed",
+              "instrumentName": "Distressed Credit Side Pocket",
+              "assetClass": "Alternative",
+              "quantity": 1750000,
+              "marketValue": 1837500
+            },
+            {
+              "id": "gamma-credit-cds",
+              "instrumentName": "Credit Index Hedge",
+              "assetClass": "Derivative",
+              "quantity": -600000,
+              "marketValue": -420000
+            },
+            {
+              "id": "gamma-credit-cash",
+              "instrumentName": "USD Credit Cash",
+              "assetClass": "Cash",
+              "quantity": 5888500,
+              "marketValue": 5888500
+            }
+          ]
+        }
+      ],
+      "transactionApprovals": [
+        {
+          "id": "approval-gammafund-001",
+          "portfolioId": "gamma-alpha",
+          "requestedBy": "gamma-admin-001",
+          "status": "Pending",
+          "amount": 281850.0,
+          "createdAt": "2026-01-15T09:30:00Z"
+        }
+      ]
+    },
+    {
+      "tenantId": "DeltaEquity",
+      "displayName": "Delta Equity Group",
+      "status": "active",
+      "region": "eastus",
+      "provisioningStatus": "Onboarded",
+      "seededAt": "2026-01-15T00:00:00Z",
+      "users": [
+        {
+          "userId": "delta-admin-001",
+          "displayName": "Finley Delta",
+          "email": "finley.delta.admin@example.com",
+          "status": "active",
+          "roles": [
+            "TenantAdmin"
+          ]
+        },
+        {
+          "userId": "delta-manager-001",
+          "displayName": "Harper Delta",
+          "email": "harper.delta.manager@example.com",
+          "status": "active",
+          "roles": [
+            "PortfolioManager"
+          ]
+        }
+      ],
+      "portfolios": [
+        {
+          "id": "delta-core",
+          "name": "Delta Core Equity",
+          "currency": "USD",
+          "marketValue": 10125000,
+          "asOfDate": "2026-01-15",
+          "positions": [
+            {
+              "id": "delta-core-large-cap",
+              "instrumentName": "Large Cap Equity Basket",
+              "assetClass": "Equity",
+              "quantity": 12800,
+              "marketValue": 3200000
+            },
+            {
+              "id": "delta-core-mid-cap",
+              "instrumentName": "Mid Cap Growth Fund",
+              "assetClass": "Equity",
+              "quantity": 9300,
+              "marketValue": 1767000
+            },
+            {
+              "id": "delta-core-international",
+              "instrumentName": "International Developed ETF",
+              "assetClass": "Equity",
+              "quantity": 18700,
+              "marketValue": 2244000
+            },
+            {
+              "id": "delta-core-short-treasury",
+              "instrumentName": "Short Treasury Fund",
+              "assetClass": "FixedIncome",
+              "quantity": 1200000,
+              "marketValue": 1194000
+            },
+            {
+              "id": "delta-core-cash",
+              "instrumentName": "USD Trade Cash",
+              "assetClass": "Cash",
+              "quantity": 1720000,
+              "marketValue": 1720000
+            }
+          ]
+        },
+        {
+          "id": "delta-tactical",
+          "name": "Delta Tactical Allocation",
+          "currency": "USD",
+          "marketValue": 8645000,
+          "asOfDate": "2026-01-15",
+          "positions": [
+            {
+              "id": "delta-tactical-factor",
+              "instrumentName": "Quality Factor ETF",
+              "assetClass": "Equity",
+              "quantity": 15800,
+              "marketValue": 1422000
+            },
+            {
+              "id": "delta-tactical-convertible",
+              "instrumentName": "Convertible Bond Fund",
+              "assetClass": "FixedIncome",
+              "quantity": 1700000,
+              "marketValue": 1734000
+            },
+            {
+              "id": "delta-tactical-volatility",
+              "instrumentName": "Managed Volatility Strategy",
+              "assetClass": "Alternative",
+              "quantity": 1250000,
+              "marketValue": 1312500
+            },
+            {
+              "id": "delta-tactical-emerging",
+              "instrumentName": "Emerging Markets Equity",
+              "assetClass": "Equity",
+              "quantity": 11000,
+              "marketValue": 990000
+            },
+            {
+              "id": "delta-tactical-cash",
+              "instrumentName": "USD Tactical Cash",
+              "assetClass": "Cash",
+              "quantity": 3186500,
+              "marketValue": 3186500
+            }
+          ]
+        }
+      ],
+      "transactionApprovals": [
+        {
+          "id": "approval-deltaequity-001",
+          "portfolioId": "delta-core",
+          "requestedBy": "delta-admin-001",
+          "status": "Pending",
+          "amount": 151875.0,
+          "createdAt": "2026-01-15T09:30:00Z"
+        }
+      ]
+    }
+  ]
+}

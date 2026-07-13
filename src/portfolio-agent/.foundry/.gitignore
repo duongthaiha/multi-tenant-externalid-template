@@ -1,0 +1,2 @@
+# Generated run payloads can contain conversation content and are reproducible.
+results/*/*/*.json

@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+tests/
+.env
+.git/
+.gitignore
+.dockerignore
+.foundry/
+eval.yaml
+evaluation-suites/
+datasets/
+evaluators/

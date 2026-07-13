@@ -1,0 +1,432 @@
+openapi: 3.0.3
+info:
+  title: Contoso Asset Management Frontend API
+  version: 0.1.0
+  description: UI-facing BFF contract consumed by the SPA through APIM.
+servers:
+  - url: https://{apimGatewayHost}/api
+    description: APIM gateway
+    variables:
+      apimGatewayHost:
+        default: example.azure-api.net
+security:
+  - externalIdBearer: []
+paths:
+  /health:
+    get:
+      summary: Health probe
+      operationId: getFrontendHealth
+      security: []
+      responses:
+        "200":
+          description: Service is healthy.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+  /tenants/{tenantId}/portfolios:
+    get:
+      summary: List tenant portfolios
+      operationId: listPortfolios
+      description: Returns UI-shaped portfolio summaries for the tenant bound to the validated token.
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/CorrelationId"
+      responses:
+        "200":
+          description: Same-tenant portfolio summaries.
+          headers:
+            X-Correlation-ID:
+              $ref: "#/components/headers/CorrelationId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PortfolioSummaryResponse"
+              example:
+                tenantId: AlphaCapital
+                portfolios:
+                  - id: alpha-growth
+                    name: Alpha Growth Portfolio
+                    currency: USD
+                    marketValue: 4250000
+                    asOfDate: "2026-07-01"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "502":
+          $ref: "#/components/responses/BackendUnavailable"
+        "504":
+          $ref: "#/components/responses/BackendTimeout"
+  /tenants/{tenantId}/portfolios/{portfolioId}/positions/{positionId}:
+    get:
+      summary: Get position detail
+      operationId: getPositionDetail
+      description: Returns one same-tenant position detail for the requested portfolio and position.
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/PortfolioId"
+        - $ref: "#/components/parameters/PositionId"
+        - $ref: "#/components/parameters/CorrelationId"
+      responses:
+        "200":
+          description: Same-tenant position detail.
+          headers:
+            X-Correlation-ID:
+              $ref: "#/components/headers/CorrelationId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PositionDetailResponse"
+              example:
+                tenantId: AlphaCapital
+                portfolioId: alpha-growth
+                position:
+                  id: pos-msft
+                  instrumentName: Microsoft
+                  assetClass: Equity
+                  quantity: 1200
+                  marketValue: 820000
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          description: Position was not found.
+        "502":
+          $ref: "#/components/responses/BackendUnavailable"
+        "504":
+          $ref: "#/components/responses/BackendTimeout"
+  /tenants/{tenantId}/transactions/{transactionId}/approve:
+    post:
+      summary: Approve a transaction
+      operationId: approveTransaction
+      description: Approves a pending transaction for a same-tenant user with write authorization.
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/TransactionId"
+        - $ref: "#/components/parameters/CorrelationId"
+      responses:
+        "200":
+          description: Transaction was approved.
+          headers:
+            X-Correlation-ID:
+              $ref: "#/components/headers/CorrelationId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApprovalResponse"
+              example:
+                tenantId: AlphaCapital
+                transactionId: txn-alpha-001
+                portfolioId: alpha-growth
+                status: Approved
+                amount: 25000
+                approvedAt: "2026-07-04T20:00:00Z"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          description: Transaction was not found.
+        "409":
+          description: Transaction is not pending.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error: transaction-not-pending
+        "502":
+          $ref: "#/components/responses/BackendUnavailable"
+        "504":
+          $ref: "#/components/responses/BackendTimeout"
+  /tenants/{tenantId}/agent/chat:
+    post:
+      summary: Ask the tenant-scoped portfolio agent
+      operationId: chatWithPortfolioAgent
+      description: Invokes the shared Foundry hosted portfolio agent through the Frontend API/BFF. Tenant authority comes from the validated access-token `extension_tenantId` claim, not from the request body. Responses v2 conversation history and hosted-session affinity are managed server-side: the SPA only sends and receives an opaque BFF conversation handle in `conversationId`; it never sees the raw Foundry conversation ID or `agent_session_id`.
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/CorrelationId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AgentChatRequest"
+            example:
+              message: "Which portfolios are available for my tenant?"
+              conversationId: "bffsess_alpha_01HZY3Y7T6ZX4YJ0K8P2Q9M4N5"
+      responses:
+        "200":
+          description: Tenant-scoped agent answer.
+          headers:
+            X-Correlation-ID:
+              $ref: "#/components/headers/CorrelationId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AgentChatResponse"
+              example:
+                tenantId: AlphaCapital
+                answer: "Alpha Growth Portfolio has a market value of USD 4,250,000. Its largest positions are Microsoft, NVIDIA, and Johnson & Johnson."
+                correlationId: "9f4bd9f23fd14aa7a25d8d14d7d1f1a1"
+                conversationId: "bffsess_alpha_01HZY3Y7T6ZX4YJ0K8P2Q9M4N5"
+                toolResults:
+                  - toolName: ListPortfolios
+                    result: success
+        "400":
+          description: Invalid chat request.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "502":
+          $ref: "#/components/responses/BackendUnavailable"
+        "504":
+          $ref: "#/components/responses/BackendTimeout"
+  /tenants/{tenantId}/agent/sessions/{sessionHandle}:
+    delete:
+      summary: Delete a portfolio-agent hosted session
+      operationId: deletePortfolioAgentSession
+      description: Deletes the Foundry hosted session binding associated with the opaque BFF-issued conversation handle for the validated tenant and user. The handle is compared with the server-side binding; the SPA must not send a raw Foundry conversation ID or `agent_session_id`.
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/SessionHandle"
+        - $ref: "#/components/parameters/CorrelationId"
+      responses:
+        "204":
+          description: Owned hosted session was cleaned up, was already cleaned up, or the underlying Foundry session was already gone.
+          headers:
+            X-Correlation-ID:
+              $ref: "#/components/headers/CorrelationId"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          description: Session handle is missing, malformed, expired, or not owned by the validated tenant/user.
+        "502":
+          $ref: "#/components/responses/BackendUnavailable"
+        "504":
+          $ref: "#/components/responses/BackendTimeout"
+components:
+  securitySchemes:
+    externalIdBearer:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Azure External ID access token for the API audience. Must include extension_tenantId, tenant_status, tenant_roles, and operation scopes.
+  parameters:
+    TenantId:
+      name: tenantId
+      in: path
+      required: true
+      schema:
+        type: string
+        enum: [AlphaCapital, BetaWealth, GammaFund, DeltaEquity]
+      description: Business tenant value compared with the validated token tenant claim.
+    PortfolioId:
+      name: portfolioId
+      in: path
+      required: true
+      schema:
+        type: string
+    PositionId:
+      name: positionId
+      in: path
+      required: true
+      schema:
+        type: string
+    TransactionId:
+      name: transactionId
+      in: path
+      required: true
+      schema:
+        type: string
+    CorrelationId:
+      name: X-Correlation-ID
+      in: header
+      required: false
+      schema:
+        type: string
+      description: Optional caller correlation ID. Services propagate or generate this value.
+    SessionHandle:
+      name: sessionHandle
+      in: path
+      required: true
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 128
+        pattern: "^[A-Za-z0-9._~-]+$"
+      description: Opaque BFF-issued conversation handle returned as `conversationId` by the chat route. It is scoped to the validated tenant/user and is not a raw Foundry conversation ID or `agent_session_id`.
+  headers:
+    CorrelationId:
+      description: Correlation ID propagated for tracing.
+      schema:
+        type: string
+  responses:
+    Unauthorized:
+      description: Missing, invalid, expired, unsigned, or wrong-audience token.
+    Forbidden:
+      description: Tenant mismatch, inactive tenant, missing scope, missing role, or failed downstream authorization.
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/ProblemDetails"
+    BackendUnavailable:
+      description: Backend authentication failed or backend is unavailable.
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/ProblemDetails"
+    BackendTimeout:
+      description: Backend timed out.
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/ProblemDetails"
+  schemas:
+    HealthResponse:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          example: healthy
+    PortfolioSummaryResponse:
+      type: object
+      required: [tenantId, portfolios]
+      properties:
+        tenantId:
+          type: string
+        portfolios:
+          type: array
+          items:
+            $ref: "#/components/schemas/PortfolioSummaryItem"
+    PortfolioSummaryItem:
+      type: object
+      required: [id, name, currency, marketValue, asOfDate]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        currency:
+          type: string
+          example: USD
+        marketValue:
+          type: number
+          format: decimal
+        asOfDate:
+          type: string
+          format: date
+    PositionDetailResponse:
+      type: object
+      required: [tenantId, portfolioId, position]
+      properties:
+        tenantId:
+          type: string
+        portfolioId:
+          type: string
+        position:
+          $ref: "#/components/schemas/PositionDetail"
+    PositionDetail:
+      type: object
+      required: [id, instrumentName, assetClass, quantity, marketValue]
+      properties:
+        id:
+          type: string
+        instrumentName:
+          type: string
+        assetClass:
+          type: string
+        quantity:
+          type: number
+          format: decimal
+        marketValue:
+          type: number
+          format: decimal
+    ApprovalResponse:
+      type: object
+      required: [tenantId, transactionId, portfolioId, status, amount]
+      properties:
+        tenantId:
+          type: string
+        transactionId:
+          type: string
+        portfolioId:
+          type: string
+        status:
+          type: string
+          example: Approved
+        amount:
+          type: number
+          format: decimal
+        approvedAt:
+          type: string
+          format: date-time
+          nullable: true
+    AgentChatRequest:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+          minLength: 1
+          maxLength: 4000
+          description: User question for the portfolio agent. Tenant IDs in this field are not trusted as authority.
+        conversationId:
+          type: string
+          nullable: true
+          description: Optional opaque BFF-issued conversation handle returned by a previous chat response. The BFF uses it to look up server-side Foundry conversation and hosted-session binding for the validated tenant/user. It is not a raw Foundry conversation ID, not a Foundry `agent_session_id`, and not tenant authority.
+    AgentChatResponse:
+      type: object
+      required: [tenantId, answer, correlationId]
+      properties:
+        tenantId:
+          type: string
+          description: Tenant ID derived from the validated token context.
+        answer:
+          type: string
+          description: Portfolio-agent answer scoped to the validated tenant.
+        correlationId:
+          type: string
+        conversationId:
+          type: string
+          nullable: true
+          description: Opaque BFF-issued conversation handle for the SPA to echo on later chat calls or pass to the cleanup route. It maps server-side to Foundry Responses conversation history and hosted-session affinity, but is not a raw Foundry ID.
+        toolResults:
+          type: array
+          description: Optional high-level tool execution summaries without raw tokens or sensitive payloads.
+          items:
+            $ref: "#/components/schemas/AgentToolResultSummary"
+    AgentToolResultSummary:
+      type: object
+      required: [toolName, result]
+      properties:
+        toolName:
+          type: string
+        result:
+          type: string
+          example: success
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+    ProblemDetails:
+      type: object
+      properties:
+        title:
+          type: string
+        detail:
+          type: string
+        status:
+          type: integer

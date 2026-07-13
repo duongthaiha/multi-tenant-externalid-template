@@ -1,0 +1,16 @@
+**
+!src/
+!src/shared/
+!src/shared/**
+!src/backend-api/
+!src/backend-api/**
+!src/frontend-api/
+!src/frontend-api/**
+src/**/bin/
+src/**/bin/**
+src/**/obj/
+src/**/obj/**
+src/spa/node_modules/
+src/spa/node_modules/**
+src/spa/dist/
+src/spa/dist/**

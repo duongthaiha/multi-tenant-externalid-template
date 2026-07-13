@@ -1,0 +1,42 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/microsoft/AgentSchema/refs/heads/main/schemas/v1.0/AgentManifest.yaml
+name: portfolio-agent-python
+displayName: "Contoso Portfolio Agent (Python)"
+description: >
+  A Python Microsoft Agent Framework Foundry hosted agent that answers
+  tenant-scoped portfolio questions through the Contoso backend API's MCP
+  gateway, mirroring the C# portfolio-agent's instructions, tool contracts,
+  and trusted-header behavior.
+metadata:
+  tags:
+    - AI Agent Hosting
+    - Responses Protocol
+    - Agent Framework
+    - Python
+    - Observability
+    - Contoso Asset Management
+template:
+  name: portfolio-agent-python
+  kind: hosted
+  protocols:
+    - protocol: responses
+      version: 2.0.0
+  resources:
+    cpu: "0.5"
+    memory: 1Gi
+  environment_variables:
+    - name: AZURE_AI_MODEL_DEPLOYMENT_NAME
+      value: "{{AZURE_AI_MODEL_DEPLOYMENT_NAME}}"
+    - name: AZURE_AI_PROJECT_ID
+      value: "{{AZURE_AI_PROJECT_ID}}"
+    - name: OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT
+      value: "true"
+    - name: AZURE_EXPERIMENTAL_ENABLE_GENAI_TRACING
+      value: "true"
+    - name: OTEL_RESOURCE_ATTRIBUTES
+      value: "microsoft.foundry.project.id={{AZURE_AI_PROJECT_ID}},gen_ai.azure_ai_project.id={{AZURE_AI_PROJECT_ID}}"
+parameters:
+  properties: []
+resources:
+  - kind: model
+    id: gpt-5.4-mini
+    name: AZURE_AI_MODEL_DEPLOYMENT_NAME

@@ -1,0 +1,98 @@
+# DRAFT / NOT executable via `azd ai agent eval run` or `eval update`.
+#
+# The installed azd extension (azure.ai.agents, ~/.azd/extensions/azure.ai.agents)
+# only supports data_source.type="azure_ai_target_completions": inspecting the
+# extension binary shows EvalConfig always converts to an agent-target request
+# (internal method ToAgentTargetAdaptableEvalGroupRequest), the only
+# EvalRunDataSourceType literal present anywhere is
+# "azure_ai_target_completions", and the only input_messages template found
+# is "{{item.query}}" -- i.e. the CLI always live-invokes the hosted agent
+# per row. There is no CLI-native jsonl/trace-only data source. This file is
+# instead a validated local contract for the add-eval-orchestration todo,
+# which must submit this suite directly via the azure-ai-projects/openai SDK
+# (client.get_openai_client().evals.runs.create(...), data_source.type=
+# "jsonl", per openai.types.evals.create_eval_jsonl_run_data_source_param)
+# rather than through this azd extension.
+#
+# candidate_response in datasets/portfolio-smoke is authored EXPECTED /
+# REFERENCE text only (per author-eval-datasets) -- it is NOT proof the live
+# hosted agent actually produced it. Before this suite can be submitted for
+# real, add-eval-orchestration must invoke the agent's Responses endpoint per
+# row with ephemeral per-case trusted context and a case-unique session id
+# (.foundry/eval-invocation-design.json trusted_context_supply /
+# session_isolation), capture the actual response text, and use that captured
+# value for grading -- never grade the authored candidate_response as if it
+# were a real execution trace. registration_status/next_action below make
+# this explicit rather than leaving it ambiguous.
+name: portfolio-smoke-trace
+mode: trace_dataset
+evaluation_level: turn
+# Never azure_ai_agent for grading: trace_dataset rows are graded on
+# pregenerated content, not a live re-invocation of the hosted agent.
+agent_target_used_for_grading: false
+source_dataset:
+    name: portfolio-smoke
+    version: "1.0"
+    local_uri: ../datasets/portfolio-smoke
+    row_filter:
+        field: evaluation_mode
+        equals: trace_dataset
+    row_count: 12
+    row_ids:
+        - smoke-001
+        - smoke-002
+        - smoke-003
+        - smoke-004
+        - smoke-005
+        - smoke-006
+        - smoke-010
+        - smoke-011
+        - smoke-015
+        - smoke-016
+        - smoke-017
+        - smoke-018
+evaluators:
+    # Domain rubric: query/response mapping is available today
+    # (candidate_response exists per row), but see the header note above --
+    # the mapped response is reference/expected text pending pregeneration.
+    - name: portfolio-domain-v2
+      version: "3"
+      local_uri: ../evaluators/portfolio-domain-v2/rubric_dimensions.json
+      data_mapping:
+          query: "{{item.query}}"
+          response: "{{item.candidate_response}}"
+    - name: builtin.task_adherence
+      version: "13"
+      # required_data_mapping is [] in the live catalog (conversation-level
+      # evaluator); query/response are supplied for judge context only.
+      data_mapping:
+          query: "{{item.query}}"
+          response: "{{item.candidate_response}}"
+    - name: builtin.intent_resolution
+      version: "7"
+      data_mapping:
+          query: "{{item.query}}"
+          response: "{{item.candidate_response}}"
+    - name: builtin.tool_call_success
+      version: "9"
+      data_mapping:
+          response: "{{item.candidate_response}}"
+options:
+    eval_model: gpt-4.1-mini
+excluded_evaluators:
+    - name: builtin.tool_call_accuracy
+      reason: "required_data_mapping=[query, tool_definitions] per the live catalog; datasets/portfolio-smoke rows carry no tool_definitions column (only datasets/portfolio-tool-diagnostics does), so this mapping is unsupported here. Reserved for portfolio-tool-diagnostics (component evaluators only in diagnostics, per suite design)."
+    - name: builtin.tool_selection
+      reason: "same tool_definitions mapping gap as tool_call_accuracy."
+    - name: builtin.tool_input_accuracy
+      reason: "required_data_mapping includes tool_definitions (unavailable) in addition to response."
+    - name: builtin.tool_output_utilization
+      reason: "same tool_definitions mapping gap."
+    - name: builtin.prohibited_actions
+      reason: "not present in the live evaluator catalog for this project (the target project's live evaluator catalog, 42 builtin entries enumerated); do not register a fake reference."
+    - name: builtin.sensitive_data_leakage
+      reason: "not present in the live evaluator catalog for this project; do not register a fake reference."
+    - name: builtin.indirect_attack
+      reason: "live catalog classification_rationale confirms 'Model only' support (risk-safety-evaluators.md); cannot grade an agent target."
+registration_status: draft_pending_pregeneration
+next_action: "add-eval-orchestration invokes the hosted agent per row (ephemeral trusted context + unique eval-{suite}-{run_id}-{case_id} session id, per eval-invocation-design.json), captures the actual response text, writes/attaches it as the authoritative per-row response value, registers the resulting content as a Foundry dataset version, and submits via client.get_openai_client().evals.runs.create(data_source={\"type\": \"jsonl\", \"source\": {\"type\": \"file_id\", \"id\": \"<registered dataset file id>\"}}, testing_criteria=[... built from the evaluators/data_mapping above ...]). Until then this file is a validated draft, not a submitted run."

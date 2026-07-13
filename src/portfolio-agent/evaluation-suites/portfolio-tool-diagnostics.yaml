@@ -1,0 +1,102 @@
+# DRAFT / NOT executable via `azd ai agent eval run` or `eval update`.
+# See portfolio-smoke-trace.yaml's header for why: the installed azd
+# extension only supports data_source.type="azure_ai_target_completions"
+# (always live-invokes the hosted agent per row); there is no CLI-native
+# jsonl/trace-only data source. This file is a validated local contract for
+# add-eval-orchestration to submit directly via the azure-ai-projects/openai
+# evals SDK once pregeneration has produced real per-row response/tool_calls.
+#
+# datasets/portfolio-tool-diagnostics is 100% evaluation_mode="trace_dataset"
+# (per datasets/portfolio-regression/portfolio-regression.manifest.json) and
+# is the only authored dataset carrying a tool_definitions column per row, so
+# this is the only suite wired with the *component* tool evaluators (Tool
+# Selection, Tool Input Accuracy, Tool Output Utilization) in addition to the
+# umbrella Tool Call Accuracy/Tool Call Success, per suite design ("use
+# component evaluators only in diagnostics").
+#
+# Blocked pending pregeneration for ALL evaluators below, not just some:
+# query/tool_definitions (required by tool_call_accuracy/tool_selection) ARE
+# present today, but grading tool selection/accuracy meaningfully requires
+# the agent's ACTUAL tool_calls trace (an optional-but-essential property per
+# the live catalog's data_schema for these two evaluators), which does not
+# exist in this dataset -- only expected_tool_calls/representative_tool_output
+# (authored expected/reference values, per author-eval-datasets). response is
+# a REQUIRED field for tool_input_accuracy/tool_output_utilization/
+# tool_call_success and is entirely absent from this dataset (no
+# candidate_response column at all). None of these evaluators can be
+# submitted for real until add-eval-orchestration invokes the agent per row
+# and captures actual response/tool_calls.
+name: portfolio-tool-diagnostics
+mode: trace_dataset
+evaluation_level: turn
+agent_target_used_for_grading: false
+source_dataset:
+    name: portfolio-tool-diagnostics
+    version: "1.0"
+    local_uri: ../datasets/portfolio-tool-diagnostics
+    row_filter:
+        field: evaluation_mode
+        equals: trace_dataset
+    row_count: 14
+    row_ids:
+        - tool-diag-001
+        - tool-diag-002
+        - tool-diag-003
+        - tool-diag-004
+        - tool-diag-005
+        - tool-diag-006
+        - tool-diag-007
+        - tool-diag-008
+        - tool-diag-009
+        - tool-diag-010
+        - tool-diag-011
+        - tool-diag-012
+        - tool-diag-013
+        - tool-diag-014
+evaluators:
+    - name: builtin.tool_call_accuracy
+      version: "12"
+      data_mapping:
+          query: "{{item.query}}"
+          tool_definitions: "{{item.tool_definitions}}"
+          tool_calls: "PENDING: no tool_calls column in datasets/portfolio-tool-diagnostics; optional-but-essential for meaningful grading; must be populated by orchestration pregeneration (see next_action)"
+      pregeneration_blocked: true
+    - name: builtin.tool_selection
+      version: "10"
+      data_mapping:
+          query: "{{item.query}}"
+          tool_definitions: "{{item.tool_definitions}}"
+          tool_calls: "PENDING: same gap as tool_call_accuracy"
+      pregeneration_blocked: true
+    - name: builtin.tool_input_accuracy
+      version: "13"
+      data_mapping:
+          query: "{{item.query}}"
+          tool_definitions: "{{item.tool_definitions}}"
+          response: "PENDING: response is a required field for this evaluator and datasets/portfolio-tool-diagnostics has no candidate_response/response column"
+      pregeneration_blocked: true
+    - name: builtin.tool_output_utilization
+      version: "7"
+      data_mapping:
+          query: "{{item.query}}"
+          tool_definitions: "{{item.tool_definitions}}"
+          response: "PENDING: same required-response gap as tool_input_accuracy"
+      pregeneration_blocked: true
+    - name: builtin.tool_call_success
+      version: "9"
+      data_mapping:
+          response: "PENDING: response is the sole required field for this evaluator and is entirely absent from this dataset"
+      pregeneration_blocked: true
+options:
+    eval_model: gpt-4.1-mini
+excluded_evaluators:
+    - name: portfolio-domain-v2
+      reason: "reserved for smoke/tenant-safety suites; this suite intentionally uses component tool evaluators only, per suite design (\"use component evaluators only in diagnostics\")."
+    - name: builtin.indirect_attack
+      reason: "live catalog classification_rationale confirms 'Model only' support; cannot grade an agent's tool-call trace."
+    - name: builtin.prohibited_actions
+      reason: "not present in the live evaluator catalog for this project; do not register a fake reference."
+    - name: builtin.sensitive_data_leakage
+      reason: "not present in the live evaluator catalog for this project; do not register a fake reference."
+registration_status: blocked_pending_pregeneration
+next_action: "add-eval-orchestration invokes the hosted agent per row with the row's authenticated_tenant context (ephemeral trusted context + unique session id per eval-invocation-design.json), captures the actual final response text AND the structured tool_calls sequence (tool name + arguments + tool_output per call), attaches both as new dataset columns (response, tool_calls) alongside the existing tool_definitions, registers the resulting content as a Foundry dataset version, and submits via client.get_openai_client().evals.runs.create(data_source={\"type\": \"jsonl\", ...}) using the data_mapping above with the PENDING placeholders replaced by real item.* references. Until then this file is a validated draft, not a submitted run; no evaluator in this suite is runnable today."

@@ -1,0 +1,31 @@
+{
+  "generatedAt": "template",
+  "tenant": {
+    "tenantId": "55555555-5555-4555-8555-555555555555",
+    "issuer": "https://sts.windows.net/55555555-5555-4555-8555-555555555555/",
+    "authority": "https://login.microsoftonline.com/55555555-5555-4555-8555-555555555555"
+  },
+  "backendServiceAuth": {
+    "displayName": "Contoso Asset Management POC Backend Service Auth",
+    "clientId": "<internal-backend-service-auth-client-id>",
+    "created": false,
+    "audience": "<internal-backend-service-auth-client-id>",
+    "serviceTokenScope": "api://<internal-backend-service-auth-client-id>/.default",
+    "applicationRoles": ["Backend.Read", "Backend.Write"],
+    "roleAssignments": {
+      "<frontend-api-managed-identity-client-id>": ["Backend.Read", "Backend.Write"],
+      "<apim-mcp-gateway-managed-identity-client-id>": ["Backend.Read", "Backend.Write"]
+    }
+  },
+  "azdEnv": {
+    "BACKEND_SERVICE_AUTHORITY": "https://login.microsoftonline.com/55555555-5555-4555-8555-555555555555",
+    "BACKEND_SERVICE_ISSUER": "https://sts.windows.net/55555555-5555-4555-8555-555555555555/",
+    "BACKEND_API_AUDIENCE": "<internal-backend-service-auth-client-id>",
+    "BACKEND_API_SERVICE_TOKEN_SCOPE": "api://<internal-backend-service-auth-client-id>/.default"
+  },
+  "notes": [
+    "No client secrets are created or stored by the script.",
+    "Bicep creates the frontend API and APIM MCP gateway managed identities.",
+    "Grant service callers Backend.Read and/or Backend.Write app roles instead of adding client IDs to backend app settings."
+  ]
+}

@@ -1,0 +1,41 @@
+# Python-agent parity scaffold, mirroring src/portfolio-agent/evaluation-suites/
+# portfolio-tenant-safety.yaml for the parallel Python hosted agent (azd service
+# "portfolio-agent-python"). See that file's header for the full rationale (agent-
+# target vs trace-dataset split, excluded builtin evaluators and why, hard-gate
+# behavior of portfolio-domain-v2's tenant_isolation_and_safe_refusal dimension);
+# this file only differs in agent target identity and local_uri path depth.
+#
+# dataset.local_uri and evaluators[*].local_uri reference the SAME canonical,
+# agent-agnostic dataset/evaluator content authored under src/portfolio-agent (via a
+# relative path, per scripts/evaluate-portfolio-agent.py's resolve_dataset_path),
+# rather than copying it -- see eval.yaml's header (one directory up from this file)
+# for why. dataset.name/version and evaluators[*].name/version are the SAME canonical
+# Foundry registrations the C# suite already uses (portfolio-tenant-safety-agent-
+# target "2.0", portfolio-domain-v2 "3", builtin.task_adherence "13", builtin.
+# relevance "10") -- referenced, not re-registered.
+#
+# As with eval.yaml, no line here is a live-verified registration against a running
+# "portfolio-agent-python" agent (that service does not exist yet); `agent.config` is
+# intentionally omitted for the same reason (no Python-specific .agent_configs asset
+# is owned by this todo); and `agent.version` is intentionally omitted since the
+# live-deployed version is always resolved from AGENT_PORTFOLIO_AGENT_PYTHON_VERSION
+# at submission time, never read from this file.
+name: portfolio-tenant-safety-python
+agent:
+    name: portfolio-agent-python
+    kind: hosted
+dataset:
+    name: portfolio-tenant-safety-agent-target
+    version: "2.0"
+    local_uri: ../../portfolio-agent/evaluation-suites/portfolio-tenant-safety-agent-target
+evaluators:
+    - name: portfolio-domain-v2
+      version: "3"
+      local_uri: ../../portfolio-agent/evaluators/portfolio-domain-v2/rubric_dimensions.json
+    - name: builtin.task_adherence
+      version: "13"
+    - name: builtin.relevance
+      version: "10"
+options:
+    eval_model: gpt-4.1-mini
+max_samples: 5

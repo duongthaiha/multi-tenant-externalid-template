@@ -1,0 +1,44 @@
+{
+  "manifest_type": "portfolio-agent-eval-dataset-composition",
+  "manifest_version": "1.0",
+  "owning_todo": "author-eval-datasets",
+  "purpose": "Optional, informational composition of the disjoint portfolio-agent evaluation dataset suites for regression runs. This manifest does not modify eval.yaml and is not wired into any evaluator or orchestration script; it only documents how the suites relate so a future add-eval-orchestration/implement-eval-suites owner can compose a regression run without re-deriving suite scope from scratch.",
+  "composed_suites": [
+    {
+      "name": "smoke-core",
+      "local_uri": "datasets/smoke-core",
+      "status": "pre-existing, unmodified by this todo",
+      "row_count": 15,
+      "evaluation_mode": "unspecified/open_question (see .foundry/eval-invocation-design.json open_questions_for_downstream_owners: whether candidate_response is authoritative trace/dataset grading or advisory)"
+    },
+    {
+      "name": "portfolio-smoke",
+      "local_uri": "datasets/portfolio-smoke",
+      "status": "added by author-eval-datasets",
+      "row_count": 18,
+      "evaluation_mode": "mixed per-row (agent_target for ambiguity/missing-id/out-of-scope cases that do not require tenant-grounded facts; trace_dataset for valid list/summary/position cases and simulated tool/backend failure cases that require verified seeded facts or deterministic failure conditions). See each row's evaluation_mode field."
+    },
+    {
+      "name": "portfolio-tenant-safety",
+      "local_uri": "datasets/portfolio-tenant-safety",
+      "status": "added by author-eval-datasets",
+      "row_count": 16,
+      "evaluation_mode": "mostly trace_dataset (cross-tenant, spoofed-authority, and session-reuse cases require verified per-item trusted context and structural tool_call/tool_output assertions that the managed azure_ai_agent target cannot carry); a few pure-refusal hidden-context/tool-bypass cases use agent_target since they assert no tool call / no disclosure rather than tenant-grounded facts. See each row's evaluation_mode field.",
+      "requires_structural_assertions": true,
+      "structural_assertion_note": "Per .foundry/eval-invocation-design.json tool_to_evaluator_mapping.tenant_isolation_dimension_recommendation, every trace_dataset row in this suite should be paired with a deterministic (non-LLM-judge) check that tool_call tenant arguments equal the row's authenticated_tenant and that tool_output never contains another tenant's seeded portfolio/position identifiers."
+    },
+    {
+      "name": "portfolio-tool-diagnostics",
+      "local_uri": "datasets/portfolio-tool-diagnostics",
+      "status": "added by author-eval-datasets",
+      "row_count": 14,
+      "evaluation_mode": "trace_dataset for all rows (tool selection/argument/output assertions require verified per-item tenant context and captured tool_calls, which the managed azure_ai_agent target cannot supply per-item). See each row's evaluation_mode field.",
+      "tool_definitions_included": true
+    }
+  ],
+  "composition_guidance": {
+    "for_full_regression_run": "A regression composition may concatenate all four suites' JSONL files, but each row already carries a self-sufficient evaluation_mode/evaluation_level/expected_tool_calls/forbidden_outcomes contract, so no suite requires re-tagging before inclusion.",
+    "disjointness_note": "This manifest and its suite folders are additive only. datasets/smoke-core/smoke-core_dg.jsonl and evaluators/smoke-core/rubric_dimensions.json are unmodified and untouched by this todo.",
+    "not_wired_into_eval_yaml": "eval.yaml is unmodified by this todo and still declares only the smoke-core dataset/evaluator pair. Registering additional suites in eval.yaml (or successor per-suite eval files) is explicitly out of scope for author-eval-datasets and is owned by implement-eval-suites."
+  }
+}

@@ -1,0 +1,37 @@
+# Historical baseline, preserved unchanged in substance (implement-eval-suites
+# only relocated this file from src/portfolio-agent/eval.yaml, which now
+# targets the reviewed portfolio-smoke suite by default). This is the exact
+# configuration that produced evalrun_example_baseline: the
+# hosted agent invocation succeeded for all 15/15 items, and grading itself
+# errored only on a since-diagnosed RBAC gap (missing
+# Microsoft.CognitiveServices/accounts/OpenAI/responses/write), not a problem
+# with this file. Run it explicitly (it is no longer the default):
+#   azd ai agent eval run --config evaluation-suites/smoke-core.yaml
+#
+# agent.version "2" is intentionally left as the literal pin this historical
+# run actually used, even though the azd environment now reports
+# AGENT_PORTFOLIO_AGENT_VERSION=32. azd's own eval runner detects and ignores
+# a stale agent.version at submission time (observed CLI behavior: "ignoring
+# stale agent.version") and always resolves/uses the live published version
+# from the azd environment instead, so this pin never silently re-targets an
+# orphaned agent version -- it is documentation of what this suite
+# historically ran against, not an operative pin. New suites (see
+# ../eval.yaml) omit version entirely rather than relying on that
+# override-and-warn behavior.
+name: smoke-core
+agent:
+    name: portfolio-agent
+    kind: hosted
+    version: "2"
+    config: ../.agent_configs/baseline/metadata.yaml
+dataset:
+    name: smoke-core
+    version: "1.0"
+    local_uri: ../datasets/smoke-core
+evaluators:
+    - name: smoke-core
+      version: "1"
+      local_uri: ../evaluators/smoke-core/rubric_dimensions.json
+options:
+    eval_model: gpt-4.1-mini
+max_samples: 15

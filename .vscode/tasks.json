@@ -1,0 +1,122 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "dotnet: build all",
+      "type": "shell",
+      "command": "dotnet build src/shared/Contoso.AssetManagement.Shared.csproj && dotnet build src/backend-api/Contoso.AssetManagement.BackendApi.csproj && dotnet build src/frontend-api/Contoso.AssetManagement.FrontendApi.csproj && dotnet build src/custom-claims-provider/Contoso.AssetManagement.CustomClaimsProvider.csproj",
+      "group": "build",
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "backend-api: run",
+      "type": "shell",
+      "command": "dotnet run --project src/backend-api/Contoso.AssetManagement.BackendApi.csproj --urls http://localhost:8080",
+      "isBackground": true,
+      "options": {
+        "env": {
+          "ASPNETCORE_ENVIRONMENT": "Development"
+        }
+      },
+      "problemMatcher": {
+        "owner": "backend-api",
+        "pattern": {
+          "regexp": "."
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": ".",
+          "endsPattern": "Now listening on: http://localhost:8080|Application started"
+        }
+      }
+    },
+    {
+      "label": "frontend-api: run",
+      "type": "shell",
+      "command": "dotnet run --project src/frontend-api/Contoso.AssetManagement.FrontendApi.csproj --urls http://localhost:7070",
+      "isBackground": true,
+      "options": {
+        "env": {
+          "ASPNETCORE_ENVIRONMENT": "Development",
+          "BackendApi__BaseAddress": "http://localhost:8080"
+        }
+      },
+      "problemMatcher": {
+        "owner": "frontend-api",
+        "pattern": {
+          "regexp": "."
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": ".",
+          "endsPattern": "Now listening on: http://localhost:7070|Application started"
+        }
+      }
+    },
+    {
+      "label": "spa: install",
+      "type": "shell",
+      "command": "npm install",
+      "options": {
+        "cwd": "${workspaceFolder}/src/spa"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "spa: build",
+      "type": "shell",
+      "command": "npm run build",
+      "options": {
+        "cwd": "${workspaceFolder}/src/spa"
+      },
+      "group": "build",
+      "problemMatcher": "$tsc"
+    },
+    {
+      "label": "spa: dev",
+      "type": "shell",
+      "command": "npm run dev -- --host 127.0.0.1 --port 5173",
+      "isBackground": true,
+      "options": {
+        "cwd": "${workspaceFolder}/src/spa"
+      },
+      "problemMatcher": {
+        "owner": "vite",
+        "pattern": {
+          "regexp": "."
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": ".",
+          "endsPattern": "Local:\\s+http://127.0.0.1:5173/|ready in"
+        }
+      }
+    },
+    {
+      "label": "claims-provider: run",
+      "type": "shell",
+      "command": "if command -v func >/dev/null 2>&1; then func host start --port 7072; else echo 'Azure Functions Core Tools is required for this task. Install func v4, then retry.'; exit 127; fi",
+      "isBackground": true,
+      "options": {
+        "cwd": "${workspaceFolder}/src/custom-claims-provider"
+      },
+      "problemMatcher": {
+        "owner": "azure-functions",
+        "pattern": {
+          "regexp": "."
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": ".",
+          "endsPattern": "Host started|Worker process started|Functions:"
+        }
+      }
+    },
+    {
+      "label": "validate: contracts and scripts",
+      "type": "shell",
+      "command": "python3 -m py_compile scripts/*.py && python3 scripts/validate-deployment.py",
+      "problemMatcher": []
+    }
+  ]
+}

@@ -1,0 +1,91 @@
+# DRAFT / NOT executable via `azd ai agent eval run` or `eval update` -- same CLI
+# limitation as src/portfolio-agent/evaluation-suites/portfolio-smoke-trace.yaml (the
+# installed azd extension only supports data_source.type="azure_ai_target_completions",
+# i.e. it always live-invokes the hosted agent per row; there is no CLI-native jsonl/
+# trace-only data source). This file is the Python profile's analog of that contract:
+# add-eval-orchestration-equivalent work for portfolio-agent-python must submit it
+# directly via the azure-ai-projects/openai SDK (client.get_openai_client().evals.
+# runs.create(...), data_source.type="jsonl"), exactly as
+# scripts/evaluate-portfolio-agent.py's run_trace_dataset_component already does for
+# the C# profile.
+#
+# source_dataset.local_uri points back into ../../portfolio-agent/datasets/portfolio-
+# smoke (relative to this file's own directory, evaluation-suites/, per
+# scripts/evaluate-portfolio-agent.py's resolve_dataset_path) rather than copying that
+# dataset here -- the underlying rows (query/expected_tool_calls/candidate_response/
+# fixture_refs) are agent-agnostic authored content owned by src/portfolio-agent. Only
+# the *captured* response/tool_calls (produced by actually invoking
+# portfolio-agent-python's own Responses endpoint per row, per
+# eval-invocation-design.json's trusted_context_supply/session_isolation rules, which
+# apply identically regardless of which hosted agent is invoked) will ever be
+# Python-agent-specific; those are generated at run time by
+# run_trace_dataset_component, never authored here.
+#
+# candidate_response in the referenced dataset is authored EXPECTED/REFERENCE text
+# only -- not proof either agent actually produced it. See registration_status/
+# next_action below, unchanged in spirit from the C# suite's equivalent file.
+name: portfolio-smoke-python-trace
+mode: trace_dataset
+evaluation_level: turn
+agent_target_used_for_grading: false
+source_dataset:
+    name: portfolio-smoke
+    version: "1.0"
+    local_uri: ../../portfolio-agent/datasets/portfolio-smoke
+    row_filter:
+        field: evaluation_mode
+        equals: trace_dataset
+    row_count: 12
+    row_ids:
+        - smoke-001
+        - smoke-002
+        - smoke-003
+        - smoke-004
+        - smoke-005
+        - smoke-006
+        - smoke-010
+        - smoke-011
+        - smoke-015
+        - smoke-016
+        - smoke-017
+        - smoke-018
+evaluators:
+    - name: portfolio-domain-v2
+      version: "3"
+      local_uri: ../../portfolio-agent/evaluators/portfolio-domain-v2/rubric_dimensions.json
+      data_mapping:
+          query: "{{item.query}}"
+          response: "{{item.candidate_response}}"
+    - name: builtin.task_adherence
+      version: "13"
+      data_mapping:
+          query: "{{item.query}}"
+          response: "{{item.candidate_response}}"
+    - name: builtin.intent_resolution
+      version: "7"
+      data_mapping:
+          query: "{{item.query}}"
+          response: "{{item.candidate_response}}"
+    - name: builtin.tool_call_success
+      version: "9"
+      data_mapping:
+          response: "{{item.candidate_response}}"
+options:
+    eval_model: gpt-4.1-mini
+excluded_evaluators:
+    - name: builtin.tool_call_accuracy
+      reason: "same tool_definitions mapping gap as the C# suite's equivalent exclusion -- see src/portfolio-agent/evaluation-suites/portfolio-smoke-trace.yaml."
+    - name: builtin.tool_selection
+      reason: "same tool_definitions mapping gap."
+    - name: builtin.tool_input_accuracy
+      reason: "required_data_mapping includes tool_definitions (unavailable) in addition to response."
+    - name: builtin.tool_output_utilization
+      reason: "same tool_definitions mapping gap."
+    - name: builtin.prohibited_actions
+      reason: "not present in the live evaluator catalog verified for this project; do not register a fake reference."
+    - name: builtin.sensitive_data_leakage
+      reason: "not present in the live evaluator catalog verified for this project; do not register a fake reference."
+    - name: builtin.indirect_attack
+      reason: "live catalog classification_rationale confirms 'Model only' support; cannot grade an agent target."
+registration_status: draft_pending_pregeneration
+next_action: "Once portfolio-agent-python is deployed and published to an azd environment, invoke it per row with ephemeral trusted context and a case-unique session id (eval-invocation-design.json trusted_context_supply/session_isolation, unchanged for this profile), capture the actual response text, register the resulting content as a Foundry dataset version, and submit via the azure-ai-projects/openai SDK using the data_mapping above. Until then this file is a validated draft, not a submitted run -- identical posture to the C# suite's own trace file before pregeneration."

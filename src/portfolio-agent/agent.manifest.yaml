@@ -1,0 +1,37 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/microsoft/AgentSchema/refs/heads/main/schemas/v1.0/AgentManifest.yaml
+name: portfolio-agent
+displayName: "Contoso Portfolio Agent"
+description: >
+  A simple C# Foundry hosted agent that answers questions about Contoso demo
+  portfolios using local tools and emits Foundry-hosted-agent observability.
+metadata:
+  tags:
+    - AI Agent Hosting
+    - Responses Protocol
+    - Agent Framework
+    - Observability
+    - Contoso Asset Management
+template:
+  name: portfolio-agent
+  kind: hosted
+  protocols:
+    - protocol: responses
+      version: 2.0.0
+  resources:
+    cpu: "0.5"
+    memory: 1Gi
+  environment_variables:
+    - name: AZURE_AI_MODEL_DEPLOYMENT_NAME
+      value: "{{AZURE_AI_MODEL_DEPLOYMENT_NAME}}"
+    - name: AZURE_AI_PROJECT_ID
+      value: "{{AZURE_AI_PROJECT_ID}}"
+    - name: OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT
+      value: "true"
+    - name: OTEL_RESOURCE_ATTRIBUTES
+      value: "microsoft.foundry.project.id={{AZURE_AI_PROJECT_ID}},gen_ai.azure_ai_project.id={{AZURE_AI_PROJECT_ID}}"
+parameters:
+  properties: []
+resources:
+  - kind: model
+    id: gpt-5.4-mini
+    name: AZURE_AI_MODEL_DEPLOYMENT_NAME

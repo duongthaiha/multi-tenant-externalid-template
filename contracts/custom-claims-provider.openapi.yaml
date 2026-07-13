@@ -1,0 +1,151 @@
+openapi: 3.0.3
+info:
+  title: Contoso Asset Management Custom Claims Provider
+  version: 0.1.0
+  description: Azure External ID token issuance callback contract for tenant and role claim enrichment.
+servers:
+  - url: https://{functionHost}/api
+    description: Azure Functions endpoint
+    variables:
+      functionHost:
+        default: func-contoso-claims.azurewebsites.net
+paths:
+  /OnTokenIssuanceStart:
+    post:
+      summary: Resolve tenant claims for token issuance
+      operationId: onTokenIssuanceStart
+      description: Resolves the user's active business tenant and tenant-scoped roles, then returns claims for token issuance. Fail-closed cases return an empty actions array with HTTP 200.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TokenIssuanceRequest"
+      responses:
+        "200":
+          description: Claims provider response. Empty actions means no usable tenant claims are issued.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TokenIssuanceResponse"
+              examples:
+                success:
+                  summary: Active tenant claims returned
+                  value:
+                    data:
+                      "@odata.type": microsoft.graph.onTokenIssuanceStartResponseData
+                      actions:
+                        - "@odata.type": microsoft.graph.tokenIssuanceStart.provideClaimsForToken
+                          claims:
+                            extension_tenantId: AlphaCapital
+                            tenant_roles:
+                              - PortfolioManager
+                            tenant_status: active
+                failClosed:
+                  summary: No usable tenant claims issued
+                  value:
+                    data:
+                      "@odata.type": microsoft.graph.onTokenIssuanceStartResponseData
+                      actions: []
+        "413":
+          description: Request body exceeded platform limits before function handling.
+components:
+  schemas:
+    TokenIssuanceRequest:
+      type: object
+      properties:
+        type:
+          type: string
+        source:
+          type: string
+        data:
+          $ref: "#/components/schemas/TokenIssuanceData"
+    TokenIssuanceData:
+      type: object
+      properties:
+        "@odata.type":
+          type: string
+        tenantId:
+          type: string
+          nullable: true
+          description: Identity tenant identifier from External ID. This is not the SaaS business tenant.
+        authenticationContext:
+          $ref: "#/components/schemas/AuthenticationContext"
+      additionalProperties: true
+    AuthenticationContext:
+      type: object
+      properties:
+        correlationId:
+          type: string
+        protocol:
+          type: string
+        clientServicePrincipal:
+          $ref: "#/components/schemas/ServicePrincipalContext"
+        resourceServicePrincipal:
+          $ref: "#/components/schemas/ServicePrincipalContext"
+        user:
+          $ref: "#/components/schemas/TokenIssuanceUser"
+      additionalProperties: true
+    ServicePrincipalContext:
+      type: object
+      properties:
+        appId:
+          type: string
+        appDisplayName:
+          type: string
+    TokenIssuanceUser:
+      type: object
+      properties:
+        id:
+          type: string
+        mail:
+          type: string
+          format: email
+          nullable: true
+        userPrincipalName:
+          type: string
+          nullable: true
+        userType:
+          type: string
+      additionalProperties: true
+    TokenIssuanceResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: "#/components/schemas/TokenIssuanceResponseData"
+    TokenIssuanceResponseData:
+      type: object
+      required: ["@odata.type", actions]
+      properties:
+        "@odata.type":
+          type: string
+          example: microsoft.graph.onTokenIssuanceStartResponseData
+        actions:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProvideClaimsAction"
+    ProvideClaimsAction:
+      type: object
+      required: ["@odata.type", claims]
+      properties:
+        "@odata.type":
+          type: string
+          example: microsoft.graph.tokenIssuanceStart.provideClaimsForToken
+        claims:
+          $ref: "#/components/schemas/TokenClaims"
+    TokenClaims:
+      type: object
+      required: [extension_tenantId, tenant_roles, tenant_status]
+      properties:
+        extension_tenantId:
+          type: string
+          enum: [AlphaCapital, BetaWealth, GammaFund, DeltaEquity]
+        tenant_roles:
+          type: array
+          items:
+            type: string
+            enum: [TenantAdmin, PortfolioManager, PortfolioViewer]
+        tenant_status:
+          type: string
+          enum: [active, suspended, inactive]

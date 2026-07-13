@@ -1,0 +1,175 @@
+{
+  "design_version": "1.0",
+  "owning_todo": "design-eval-invocation",
+  "purpose": "Machine-readable contract for downstream todos (author-eval-datasets, implement-eval-suites, add-eval-orchestration, persist-eval-lineage, document-eval-operation) describing how evaluation invocations against portfolio-agent MUST be authenticated, versioned, context-scoped, isolated, and redacted. This file does not modify eval.yaml, datasets, or evaluators; those remain owned by their respective todos.",
+  "evidence_sources": [
+    "A local evaluation diagnosis that root-caused grading failures to missing Microsoft.CognitiveServices/accounts/OpenAI/responses/write on the eval-triggering principal while agent invocation itself succeeded",
+    "src/portfolio-agent/eval.yaml (contains a documentation/fallback agent.version that orchestration must replace with the deployed version)",
+    "src/portfolio-agent/Program.cs (PortfolioToolContext.FromRequest/FromMetadata/FromMetadataAndClientHeaders, PortfolioHostedSessionIsolationKeyProvider, PortfolioToolContextCache, PortfolioInvocationHandler, PortfolioBackendClient)",
+    "src/portfolio-agent/agent.yaml (only 'responses' v2.0.0 protocol is declared as the active hosted front-door protocol; Invocations 1.0 is explicitly reserved for rollback only)",
+    "src/shared/TenantConstants.cs (canonical header names)",
+    "azd environment output (AGENT_PORTFOLIO_AGENT_VERSION, AGENT_PORTFOLIO_AGENT_ENDPOINT, and AGENT_PORTFOLIO_AGENT_RESPONSES_ENDPOINT)",
+    "src/portfolio-agent/datasets/smoke-core (each row already carries a precomputed candidate_response field, implying a trace/dataset grading intent that current live agent-target invocation silently overrides)",
+    "azure-ai-projects 2.3.0 SDK typedefs (AzureAIAgentTargetParam has only type/name/version/tool_descriptions; TargetCompletionEvalRunDataSource has no per-item metadata channel) confirming the managed azure_ai_agent target cannot carry per-item tenant context"
+  ],
+  "decisions": {
+    "authn_rbac_preflight": {
+      "requirement": "Before any evals.runs.create submission, the invoking identity (human azd user or CI service principal/managed identity) MUST be verified to hold a data-plane role granting Microsoft.CognitiveServices/accounts/OpenAI/responses/write at the Foundry account scope (or project scope) used for both the eval grading model and, for trace/dataset pregeneration, the agent's own model deployment.",
+      "preflight_steps": [
+        "Resolve principal: az ad signed-in-user show (interactive) or the CI service principal/managed identity clientId/objectId.",
+        "az role assignment list --scope <azure_ai_account_resource_id> --include-inherited -o json for that principal.",
+        "For each assigned role, az role definition list --name <role> and confirm dataActions contains Microsoft.CognitiveServices/accounts/OpenAI/responses/write (least-privilege target role: 'Cognitive Services OpenAI User'; do not rely on subscription Owner, whose dataActions is empty).",
+        "Fail closed (do not call evals.runs.create) with a remediation message naming the exact `az role assignment create --role \"Cognitive Services OpenAI User\" --scope <account>` command if the check fails.",
+        "Re-check propagation with a bounded retry/backoff (RBAC can take minutes) rather than looping indefinitely."
+      ],
+      "least_privilege_note": "CI/automation should use a dedicated service principal or federated workload identity provisioned with only 'Cognitive Services OpenAI User' (+ whatever minimal Foundry role is required to call evals.* control-plane APIs), not a human Owner assignment.",
+      "acceptance_criteria": [
+        "A dry-run/preflight command exits non-zero with an actionable message when the required data action is absent, without having submitted a run.",
+        "A successful preflight check is a hard prerequisite gate documented in the orchestration script contract; no suite may bypass it."
+      ]
+    },
+    "agent_version_resolution": {
+      "requirement": "eval.yaml's committed agent.version is documentation/fallback only and MUST NOT be treated as authoritative at submission time. The orchestration script resolves the live deployed version from the azd environment and overrides the value passed to evals.runs.create.",
+      "resolution_command": "azd env get-value AGENT_PORTFOLIO_AGENT_VERSION -e <azd-environment-name> (verified to return 32 for the example-dev environment; falls back to parsing .azure/<env>/.env AGENT_PORTFOLIO_AGENT_VERSION if azd CLI is unavailable).",
+      "submission_contract": "The value passed as target.version in the AzureAIAgentTargetParam-shaped payload sent to evals.runs.create must equal the azd-resolved value, not eval.yaml's literal string. If the two differ, log the mismatch (informational) but always use the azd-resolved value as authoritative for actual submission.",
+      "fail_closed_condition": "If AGENT_PORTFOLIO_AGENT_VERSION is unset/empty in the resolved azd environment, the run must not be submitted.",
+      "reproducible_regression_note": "AGENT_PORTFOLIO_AGENT_ENDPOINT already embeds a version segment (.../agents/portfolio-agent/versions/{n}) while AGENT_PORTFOLIO_AGENT_RESPONSES_ENDPOINT does not (always targets whatever is currently published). Regression suites that must pin to a specific historical version should validate (via a harmless preflight call) whether a version-suffixed responses route is actually routable before depending on it; otherwise rely on the evals.runs.create target.version field, which the Foundry evaluation service is confirmed to honor server-side regardless of base endpoint URL.",
+      "acceptance_criteria": [
+        "No eval submission path reads eval.yaml's agent.version as the value sent on the wire; it is only used as a human-readable fallback/expectation to diff against.",
+        "Orchestration logs both the eval.yaml-pinned version and the azd-resolved version on every run for traceability."
+      ]
+    },
+    "trusted_context_supply": {
+      "summary": "Trusted tenant/user context can only reach portfolio-agent's tools through one of three channels; only two are viable for evaluation, and they map directly to the agent-target vs trace/dataset split below.",
+      "channels": [
+        {
+          "channel": "HTTP headers on the Responses protocol call",
+          "headers": [
+            "X-Authenticated-Tenant",
+            "X-Authenticated-User",
+            "X-User-Authorization: Bearer <token>",
+            "X-Service-Authorization: Bearer <token>",
+            "X-Correlation-ID"
+          ],
+          "source": "TenantConstants.Headers via PortfolioToolContext.FromRequest",
+          "usable_for": "trace/dataset pregeneration only, because the orchestration script controls the HTTP call directly.",
+          "not_usable_for": "the Foundry-managed azure_ai_agent eval target, which invokes the agent server-side; the eval author has no schema-level way to inject custom headers per item."
+        },
+        {
+          "channel": "Responses API 'metadata' request field",
+          "keys": ["contoso_tenant_id", "contoso_user_id", "contoso_user_access_token", "contoso_service_token", "contoso_correlation_id"],
+          "source": "PortfolioToolContext.FromMetadata / FromMetadataAndClientHeaders, consumed by PortfolioHostedSessionIsolationKeyProvider.GetKeysAsync(request.Metadata, ...)",
+          "usable_for": "trace/dataset pregeneration only (same reasoning as above: the orchestration script builds the raw Responses request body itself).",
+          "not_usable_for": "the managed azure_ai_agent eval target: AzureAIAgentTargetParam and TargetCompletionEvalRunDataSource (azure-ai-projects 2.3.0) expose no per-item metadata field; input_messages templates only interpolate {{item.*}} into message content, not into a sibling metadata object."
+        },
+        {
+          "channel": "Invocations protocol JSON body (TenantId/UserId/UserAccessToken/ServiceToken/CorrelationId/ConversationId)",
+          "source": "PortfolioInvocationHandler / PortfolioInvocationRequest",
+          "status": "NOT currently declared as an active hosted protocol (agent.yaml lists only 'responses' v2.0.0; Invocations 1.0 is explicitly reserved for rollback). Do not assume this endpoint is routable through the Foundry front door.",
+          "usable_for": "only after an explicit connectivity preflight (harmless ping) confirms the Invocations route is exposed for the current deployment; if confirmed, this is the cleanest channel since it takes explicit typed fields instead of overloading headers/metadata.",
+          "acceptance_criteria": "Orchestration must probe this endpoint once per run and record whether it is reachable; never fail silently into using it if unreachable."
+        }
+      ],
+      "conclusion": "Direct hosted agent-target evaluation (matching the diagnosed baseline's data_source.target.type=azure_ai_agent) is confirmed by evidence to work end-to-end for invocation and is preferred per instructions, but it structurally cannot carry per-item trusted tenant context. It is therefore only appropriate for suites whose grading does not depend on verified tenant-scoped facts (e.g., ambiguity handling, scope refusal, general response quality against the local-demo-portfolios framing already used in datasets/smoke-core). Any suite asserting real tool-grounded tenant data or cross-tenant isolation MUST use the trace/dataset pattern below."
+    },
+    "ephemeral_credentials": {
+      "requirement": "User and service tokens used to supply trusted context for trace/dataset pregeneration are minted live, held in memory only for the duration of a single item's invocation, and never written to disk, environment files, dataset files, or committed anywhere.",
+      "sourcing": [
+        "User token: mint per-tenant demo-user tokens on demand via the existing scripts/get-external-id-access-token.py (or create-external-id-demo-users.py-provisioned identities) for one of AlphaCapital/BetaWealth/GammaFund/DeltaEquity as the case requires.",
+        "Service token: mint via the existing workforce/federated-identity scripts (scripts/create-internal-backend-service-auth.py, scripts/create-workforce-federated-users.py) using the internal MngEnv Entra tenant, matching the documented frontend-to-backend service auth model; never use the External ID customer tenant for service auth."
+      ],
+      "handling_rules": [
+        "TTL of minted tokens should be the shortest the identity provider allows (do not request extended-lifetime tokens for eval use).",
+        "Tokens live only in local process variables for the duration of the HTTP call; scrub/drop references immediately after each item completes.",
+        "Never log Authorization/X-User-Authorization/X-Service-Authorization header values, even at debug level (matches PortfolioBackendClient's existing masked '******' placeholder pattern for Authorization headers).",
+        "No .env, dataset JSONL, or .foundry/results/*.json file may ever contain a raw token value."
+      ],
+      "acceptance_criteria": [
+        "A repository-wide check (grep for Bearer/eyJ JWT-shaped strings) across datasets/, evaluators/, and .foundry/ artifacts produced by the eval pipeline returns no matches.",
+        "Token minting failures fail the individual case (skipped/errored) rather than falling back to a shared/cached token from another tenant or case."
+      ]
+    },
+    "session_isolation": {
+      "requirement": "Every evaluation case (and every retry of that case) MUST use a unique conversation/session identity and a unique synthetic user id, and MUST supply complete trusted context on every single request so the agent's fallback caches are never relied upon.",
+      "rationale": "PortfolioToolContextCache (Program.cs) is a process-wide, cross-request, 15-minute TTL fallback: RequireToolContext() falls back first to AIAgent.CurrentRunContext-keyed cache entries and then to a single global 'Latest' entry when the current request's context is incomplete. In a warm hosted container this can silently reuse a different tenant/user/session's last-seen trusted context, which is a cross-tenant leakage vector if evaluation requests ever omit context or interleave with other traffic in the same instance.",
+      "isolation_rules": [
+        "Session/conversation id per case: `eval-{suite}-{run_id}-{case_id}` — never reused across cases or reruns.",
+        "Synthetic user id per case: `eval-user-{tenant}-{case_id}` — distinct per case so PortfolioToolContextCache.Store keys never collide across cases even if the fallback path is ever hit.",
+        "Every request for every case must set X-Authenticated-Tenant/X-Authenticated-User/X-User-Authorization/X-Service-Authorization/X-Correlation-ID (or the equivalent metadata keys) completely and correctly — never omit fields expecting fallback resolution to fill gaps.",
+        "Multi-turn cases reuse the same case-scoped conversation id across their own turns only; single-turn cases never reuse another case's id even by prefix collision (use full case id, not truncated)."
+      ],
+      "acceptance_criteria": [
+        "A tenant-safety/session-isolation suite case exists that runs two cases back-to-back against the same warm target with different tenants and asserts the second case's tool_call arguments/tool_output never reference the first case's tenant id or portfolio names.",
+        "No case relies on PortfolioToolContextCache.TryGetCurrentRunContext/TryGetLatest succeeding; each case is self-sufficient."
+      ]
+    },
+    "agent_target_vs_trace_dataset_split": {
+      "agent_target_mode": {
+        "when_to_use": "Suites where correctness does not depend on verified per-tenant tool-grounded facts: general response quality, ambiguity/clarification handling, out-of-scope/hallucination refusal against the 'local demo portfolios' framing, and deliberate no-context fail-closed behavior checks.",
+        "mechanics": "data_source.type=azure_ai_target_completions, target.type=azure_ai_agent, target.name=portfolio-agent, target.version=<azd-resolved value>, target.tool_descriptions populated (see tool_to_evaluator_mapping).",
+        "known_limitation": "Cannot inject per-item tenant/user context or a case-unique session id; every item in this mode implicitly runs with whatever ambient/fallback context (or none) the hosted instance currently has. Do not use for any assertion requiring specific tenant grounding."
+      },
+      "trace_dataset_mode": {
+        "when_to_use": "Any suite asserting tenant isolation, real tool-grounded factual accuracy against seeded per-tenant data, or specific session-isolation behavior (tenant-safety, tool-diagnostic, session-isolation suites).",
+        "mechanics": "Orchestration script invokes the agent's Responses endpoint directly per case with explicit ephemeral trusted context and a case-unique session id (per session_isolation above), captures the resulting response text plus tool_call/tool_output pairs, redacts sensitive values (see output_redaction), and writes the result into the case's candidate_response/tool_calls dataset fields. The eval run then grades these pre-captured fields directly (no live target/no re-invocation at grading time).",
+        "existing_evidence": "datasets/smoke-core/*.jsonl already contains a populated candidate_response field per row, but the diagnosed baseline run re-invoked the live agent anyway (data_source.target=azure_ai_agent), silently discarding the precomputed field. Downstream owners (implement-eval-suites/author-eval-datasets) must explicitly decide per suite whether candidate_response is authoritative (trace/dataset grading) or advisory/stale (agent-target re-invocation), and document that choice — do not leave it ambiguous."
+      },
+      "acceptance_criteria": [
+        "eval.yaml (or its successor per-suite files, owned by implement-eval-suites) explicitly states which mode each suite uses.",
+        "Any suite in trace_dataset_mode never sets data_source.target to azure_ai_agent for grading; any suite in agent_target_mode never asserts tenant-specific facts."
+      ]
+    },
+    "output_redaction": {
+      "requirement": "Nothing written to committed dataset files, evaluator artifacts, or .foundry/results/*.json may contain live secrets or unnecessary PII.",
+      "rules": [
+        "Never persist raw bearer/access/refresh/service tokens, connection strings, or API keys, anywhere, at any verbosity level.",
+        "Redact principal UPNs/emails appearing in upstream Azure error text to a fixed placeholder (e.g. [REDACTED_PRINCIPAL_EMAIL]).",
+        "Synthetic eval user ids (eval-user-{tenant}-{case_id}) are used instead of any real demo-user email/UPN inside captured traces so no real identity value needs redaction after the fact.",
+        "Tool call arguments/results are safe to persist verbatim (they are the POC's own synthetic demo portfolio data), except any field carrying a real access token or credential-shaped string.",
+        "Correlation IDs are safe to persist; they contain no sensitive data and are required for cross-system tracing (APIM/frontend/backend/agent/App Insights)."
+      ],
+      "acceptance_criteria": [
+        "A redaction check (simple regex scan for Bearer, eyJ-prefixed JWT shapes, and known key/connection-string patterns) runs over every artifact before it is written under .foundry/ or datasets/, and blocks the write on a match."
+      ]
+    },
+    "tool_to_evaluator_mapping": {
+      "declared_tools": [
+        {
+          "name": "ListPortfolios",
+          "description": "List portfolios for the authenticated tenant only.",
+          "maps_to_rubric_dimensions": ["ambiguity_handling", "factual_accuracy"]
+        },
+        {
+          "name": "GetPortfolioSummary",
+          "description": "Get a summary for one portfolio in the authenticated tenant by portfolio name or ID.",
+          "maps_to_rubric_dimensions": ["factual_accuracy", "contextual_relevance"]
+        },
+        {
+          "name": "GetPositionDetail",
+          "description": "Get a position detail from a portfolio in the authenticated tenant by portfolio name or ID and position ID.",
+          "maps_to_rubric_dimensions": ["factual_accuracy", "clarity_and_completeness"]
+        }
+      ],
+      "tool_descriptions_population": "For any agent-target run, populate data_source.target.tool_descriptions with exactly these name/description pairs (copied verbatim from the AIFunctionFactory.Create calls in Program.cs) instead of leaving it as [] — this gives the LLM-judge grader accurate tool context and was flagged as a grading-quality gap in the baseline diagnosis, though it was not the root cause of the 15/15 errors.",
+      "tenant_isolation_dimension_recommendation": "For trace/dataset suites (tenant-safety, tool-diagnostic), recommend author-eval-datasets/refine-domain-rubric add a structural (non-LLM-judge) evaluator dimension asserting: every observed tool_call argument's tenantId equals the case's injected trusted tenant id, and no tool_output value matches another tenant's seeded portfolio/position identifiers. This is a deterministic assertion, not a rubric-scored LLM judgment, and should run as a pass/fail gate rather than a weighted score.",
+      "acceptance_criteria": [
+        "Every agent-target suite definition populates tool_descriptions non-empty.",
+        "Every trace/dataset suite pairs its LLM-judge rubric evaluator with at least one deterministic structural assertion over tool_calls for tenant-isolation-sensitive cases."
+      ]
+    }
+  },
+  "acceptance_criteria_summary": [
+    "RBAC preflight blocks submission (not just documents) when the triggering principal lacks Microsoft.CognitiveServices/accounts/OpenAI/responses/write.",
+    "Agent version used in any submitted run is always resolved live from azd (azd env get-value AGENT_PORTFOLIO_AGENT_VERSION), never taken verbatim from eval.yaml's committed pin.",
+    "Trusted tenant/user context for any suite asserting tenant-specific facts is supplied only via direct orchestration-controlled HTTP calls (headers + metadata) to the agent's Responses endpoint, never via the schema-limited managed azure_ai_agent eval target.",
+    "Every eval case uses a unique conversation id and synthetic user id; no case may depend on PortfolioToolContextCache fallback behavior.",
+    "Ephemeral user/service tokens are minted just-in-time, held in memory only, and never appear in any committed artifact.",
+    "All persisted eval artifacts pass a secret/PII redaction check before being written.",
+    "Agent-target vs trace/dataset mode is an explicit, documented choice per suite, not an accidental default.",
+    "tool_descriptions for agent-target runs are populated from the three declared tools' real names/descriptions."
+  ],
+  "open_questions_for_downstream_owners": [
+    "Whether the Invocations protocol endpoint (AGENT_PORTFOLIO_AGENT_INVOCATIONS_ENDPOINT) is actually routable given agent.yaml only declares 'responses' as active — requires a live connectivity preflight before add-eval-orchestration relies on it as a trusted-context channel.",
+    "Whether datasets/smoke-core's existing precomputed candidate_response fields should be treated as authoritative (trace/dataset grading) going forward, since the diagnosed baseline run silently re-invoked the live agent instead of grading those fields — implement-eval-suites/author-eval-datasets must decide and document this explicitly per suite."
+  ]
+}

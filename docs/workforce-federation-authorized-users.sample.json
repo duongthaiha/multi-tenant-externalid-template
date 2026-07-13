@@ -1,0 +1,46 @@
+{
+  "sourceTenantId": "66666666-6666-4666-8666-666666666666",
+  "users": [
+    {
+      "sourceObjectId": "00000000-0000-4000-8000-000000000001",
+      "email": "replace-alpha-user@example.com",
+      "displayName": "REPLACE: AlphaCapital workforce user",
+      "businessTenantId": "AlphaCapital",
+      "roles": [
+        "TenantAdmin"
+      ],
+      "status": "active"
+    },
+    {
+      "sourceObjectId": "00000000-0000-4000-8000-000000000002",
+      "email": "replace-beta-user@example.com",
+      "displayName": "REPLACE: BetaWealth workforce user",
+      "businessTenantId": "BetaWealth",
+      "roles": [
+        "PortfolioManager"
+      ],
+      "status": "active"
+    },
+    {
+      "sourceObjectId": "00000000-0000-4000-8000-000000000003",
+      "email": "replace-gamma-user@example.com",
+      "displayName": "REPLACE: GammaFund workforce user",
+      "businessTenantId": "GammaFund",
+      "roles": [
+        "PortfolioViewer"
+      ],
+      "status": "active"
+    },
+    {
+      "sourceObjectId": "00000000-0000-4000-8000-000000000004",
+      "email": "replace-delta-user@example.com",
+      "displayName": "REPLACE: DeltaEquity workforce user",
+      "businessTenantId": "DeltaEquity",
+      "roles": [
+        "TenantAdmin",
+        "PortfolioManager"
+      ],
+      "status": "active"
+    }
+  ]
+}

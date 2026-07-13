@@ -1,0 +1,12 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",
+    "ControlPlaneCosmos__Endpoint": "https://<control-plane-account>.documents.azure.com:443/",
+    "ControlPlaneCosmos__DatabaseName": "tenant-directory",
+    "ControlPlaneCosmos__RequestTimeoutMilliseconds": "1800",
+    "ExternalId__TenantId": "<external-id-tenant-id>",
+    "ExternalId__TenantName": "<external-id-tenant-name>"
+  }
+}
