@@ -198,5 +198,4 @@ az deployment sub what-if --location eastus --template-file infra/main.bicep
 - APIM, the frontend API, and the backend API must independently validate tenant binding.
 - The backend API is the only application component allowed to access tenant Cosmos accounts.
 - Cosmos access uses managed identity and Entra RBAC; user JWTs must never be sent to Cosmos DB.
-- Every Cosmos account must use `disableLocalAuth: true`, `publicNetworkAccess: 'Disabled'`, private endpoints, and private DNS.
 - Do not log JWTs, access tokens, refresh tokens, secrets, or full sensitive claim payloads.
