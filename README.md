@@ -14,23 +14,6 @@ synthetic examples. Replace them through the documented `azd` environment
 variables and local configuration files before deployment. Never commit local
 credentials, generated identity output, or Foundry evaluation results.
 
-## Current documentation research
-
-This repository includes a Context7 MCP server configuration in
-`.github/mcp.json`. GitHub Copilot CLI loads it automatically when started from
-the repository and can use it to retrieve current, version-specific library,
-SDK, API, CLI, and Azure service documentation.
-
-Verify the connection with:
-
-```bash
-copilot mcp get context7
-```
-
-Then ask Copilot to `use Context7` when a task depends on current external
-documentation. Context7 complements the checked-in `docs/`; it does not index
-or replace the repository's architecture and product documentation.
-
 ## Locked implementation choices
 
 | Decision | Choice |
