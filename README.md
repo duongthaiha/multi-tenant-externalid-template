@@ -4,7 +4,6 @@ This public template contains the Contoso Asset Management multi-tenant SaaS pro
 
 The target architecture and backlog live in:
 
-- `docs/product-backlog.md`
 - `docs/architecture-design.md`
 - `docs/local-development.md`
 - `docs/workforce-federation-setup.md`
