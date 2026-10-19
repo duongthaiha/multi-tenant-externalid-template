@@ -36,7 +36,7 @@ dependencies = [
     # Model Context Protocol client used to call BACKEND_MCP_SERVER_URL
     # (APIM's native MCP gateway) -- the agent never calls the Backend API
     # or Cosmos DB directly.
-    "mcp==1.28.1",
+    "mcp==1.30.0",
     "httpx==0.28.1",
     # OpenTelemetry API/SDK for the agent's own tool span/counter
     # instrumentation. Azure Monitor trace/log/metric export is configured
