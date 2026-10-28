@@ -43,7 +43,7 @@ dependencies = [
     # by azure-ai-agentserver-core via the microsoft-opentelemetry distro
     # (a transitive dependency); pinned here too since this agent's
     # telemetry module depends on its metrics-export behavior.
-    "opentelemetry-api==1.43.0",
+    "opentelemetry-api==1.45.1",
     "opentelemetry-sdk==1.43.0",
     "microsoft-opentelemetry==1.3.5",
     "pydantic==2.13.4",
